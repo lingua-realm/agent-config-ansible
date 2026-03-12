@@ -13,3 +13,9 @@ dependencies = [
 [tool.uv]
 index-url = "https://mirrors.aliyun.com/pypi/simple"
 package = true
+
+[dependency-groups]
+dev = [
+    "molecule>=26.3.0",
+    "molecule-plugins[podman]>=25.8.12",
+]
