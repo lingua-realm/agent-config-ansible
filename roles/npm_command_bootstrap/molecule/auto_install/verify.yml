@@ -1,0 +1,23 @@
+---
+# 幂等性：第二次运行时 prettier 已存在，installed_now 应为 false
+- name: Verify — 自动安装幂等性
+  hosts: all
+  tasks:
+    - name: 再次引导 prettier，验证不重复安装
+      include_role:
+        name: npm_command_bootstrap
+      vars:
+        npm_command_bootstrap_key: prettier
+        npm_command_bootstrap_display_name: Prettier
+        npm_command_bootstrap_command: prettier
+        npm_command_bootstrap_version_command: prettier --version
+        npm_command_bootstrap_auto_install_npm: prettier
+        npm_command_bootstrap_required: true
+
+    - name: 断言第二次运行不触发安装
+      assert:
+        that:
+          - npm_command_bootstrap_results.prettier.available | bool
+          - not (npm_command_bootstrap_results.prettier.installed_now | bool)
+        fail_msg: "幂等性验证失败：{{ npm_command_bootstrap_results }}"
+        success_msg: "✓ 自动安装幂等性验证通过"

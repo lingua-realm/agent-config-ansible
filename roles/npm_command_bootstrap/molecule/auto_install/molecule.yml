@@ -1,0 +1,17 @@
+---
+# 场景：命令不存在，通过 npm 自动安装后可用
+dependency:
+  name: galaxy
+driver:
+  name: podman
+platforms:
+  - name: instance-auto-install
+    image: "node:lts-bookworm"
+    pre_build_image: true
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+verifier:
+  name: ansible

@@ -1,0 +1,17 @@
+---
+# 场景：命令在容器中已存在，验证 role 正确读取并记录状态，且不触发安装
+dependency:
+  name: galaxy
+driver:
+  name: podman
+platforms:
+  - name: instance-default
+    image: "node:lts-bookworm"
+    pre_build_image: true
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+verifier:
+  name: ansible

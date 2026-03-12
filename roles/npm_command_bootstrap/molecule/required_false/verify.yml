@@ -1,0 +1,20 @@
+---
+- name: Verify — required=false 幂等性
+  hosts: all
+  tasks:
+    - name: 再次引导不存在的命令，行为应一致
+      include_role:
+        name: npm_command_bootstrap
+      vars:
+        npm_command_bootstrap_key: nonexistent
+        npm_command_bootstrap_display_name: Nonexistent CLI
+        npm_command_bootstrap_command: nonexistent-cli
+        npm_command_bootstrap_version_command: nonexistent-cli --version
+        npm_command_bootstrap_required: false
+
+    - name: 断言幂等执行后状态不变
+      assert:
+        that:
+          - not (npm_command_bootstrap_results.nonexistent.available | bool)
+        fail_msg: "幂等性验证失败：{{ npm_command_bootstrap_results }}"
+        success_msg: "✓ required=false 幂等性验证通过"

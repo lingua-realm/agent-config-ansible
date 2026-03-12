@@ -1,0 +1,115 @@
+---
+- name: 初始化结果字典（如尚未存在）
+  set_fact:
+    npm_command_bootstrap_results: "{{ npm_command_bootstrap_results | default({}) }}"
+
+- name: 检查 {{ npm_command_bootstrap_display_name }} 是否在 PATH 中
+  shell: "command -v {{ npm_command_bootstrap_command }}"
+  register: _npm_cb_path_result
+  changed_when: false
+  failed_when: false
+
+- name: 获取 {{ npm_command_bootstrap_display_name }} 版本
+  shell: "{{ npm_command_bootstrap_version_command }}"
+  register: _npm_cb_version_result
+  changed_when: false
+  failed_when: false
+  when: _npm_cb_path_result.rc == 0
+
+- name: 通过 npm 安装 {{ npm_command_bootstrap_display_name }}
+  npm:
+    name: "{{ npm_command_bootstrap_auto_install_npm }}"
+    global: true
+    state: present
+  when:
+    - _npm_cb_path_result.rc != 0
+    - npm_command_bootstrap_auto_install_npm is defined
+    - npm_command_bootstrap_auto_install_npm | length > 0
+
+- name: 重新检查 {{ npm_command_bootstrap_display_name }} 是否在 PATH 中
+  shell: "command -v {{ npm_command_bootstrap_command }}"
+  register: _npm_cb_path_after
+  changed_when: false
+  failed_when: false
+  when:
+    - _npm_cb_path_result.rc != 0
+    - npm_command_bootstrap_auto_install_npm is defined
+    - npm_command_bootstrap_auto_install_npm | length > 0
+
+- name: 获取安装后的 {{ npm_command_bootstrap_display_name }} 版本
+  shell: "{{ npm_command_bootstrap_version_command }}"
+  register: _npm_cb_version_after
+  changed_when: false
+  failed_when: false
+  when:
+    - _npm_cb_path_result.rc != 0
+    - npm_command_bootstrap_auto_install_npm is defined
+    - npm_command_bootstrap_auto_install_npm | length > 0
+    - _npm_cb_path_after.rc == 0
+
+- name: 初始化 {{ npm_command_bootstrap_display_name }} 最终状态
+  set_fact:
+    _npm_cb_available: false
+    _npm_cb_path: ""
+    _npm_cb_version: ""
+
+- name: 汇总已存在的 {{ npm_command_bootstrap_display_name }} 状态
+  set_fact:
+    _npm_cb_available: true
+    _npm_cb_path: "{{ _npm_cb_path_result.stdout | default('') }}"
+    _npm_cb_version: "{{ _npm_cb_version_result.stdout | default('') }}"
+  when: _npm_cb_path_result.rc == 0
+
+- name: 汇总安装后的 {{ npm_command_bootstrap_display_name }} 状态
+  set_fact:
+    _npm_cb_available: true
+    _npm_cb_path: "{{ _npm_cb_path_after.stdout | default('') }}"
+    _npm_cb_version: "{{ _npm_cb_version_after.stdout | default('') }}"
+  when:
+    - _npm_cb_path_result.rc != 0
+    - npm_command_bootstrap_auto_install_npm is defined
+    - npm_command_bootstrap_auto_install_npm | length > 0
+    - _npm_cb_path_after is defined
+    - _npm_cb_path_after.rc == 0
+
+- name: 终止部署（{{ npm_command_bootstrap_display_name }} 不可用）
+  fail:
+    msg: >-
+      {%- if npm_command_bootstrap_auto_install_npm is defined and _npm_cb_path_result.rc != 0 -%}
+        {{ npm_command_bootstrap_install_fail_message | default(npm_command_bootstrap_display_name + ' 通过 npm 安装后仍不可用，请检查 npm 配置') }}
+      {%- else -%}
+        {{ npm_command_bootstrap_fail_message | default(npm_command_bootstrap_display_name + ' 未找到，且未配置自动安装') }}
+      {%- endif -%}
+  when:
+    - npm_command_bootstrap_required | default(true) | bool
+    - not (_npm_cb_available | bool)
+
+- name: 记录 {{ npm_command_bootstrap_display_name }} 状态
+  set_fact:
+    npm_command_bootstrap_results: >-
+      {{
+        npm_command_bootstrap_results
+        | combine(
+            {
+              npm_command_bootstrap_key: {
+                'available': _npm_cb_available | bool,
+                'path': _npm_cb_path,
+                'version': _npm_cb_version,
+                'installed_now': (npm_command_bootstrap_auto_install_npm is defined and _npm_cb_path_result.rc != 0 and _npm_cb_available | bool),
+              }
+            },
+            recursive=True
+          )
+      }}
+
+- name: 显示 {{ npm_command_bootstrap_display_name }} 状态（可用）
+  debug:
+    msg: >-
+      ✓ {{ npm_command_bootstrap_display_name }} 可用：{{ _npm_cb_path }}
+      {% if _npm_cb_version %}（{{ _npm_cb_version }}）{% endif %}
+  when: _npm_cb_available | bool
+
+- name: 显示 {{ npm_command_bootstrap_display_name }} 状态（不可用）
+  debug:
+    msg: "✗ {{ npm_command_bootstrap_display_name }} 不可用（required=false，跳过）"
+  when: not (_npm_cb_available | bool)

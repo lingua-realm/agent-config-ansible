@@ -1,0 +1,24 @@
+---
+# (必填) 结果字典中的唯一键
+npm_command_bootstrap_key: ""
+
+# (必填) 可读名称，用于日志输出
+npm_command_bootstrap_display_name: ""
+
+# (必填) 在 PATH 中检查的可执行文件名
+npm_command_bootstrap_command: ""
+
+# (必填) 获取版本的完整命令，如 "node --version"
+npm_command_bootstrap_version_command: ""
+
+# (可选) 若命令不存在，自动执行 npm install -g 的包名
+# npm_command_bootstrap_auto_install_npm: ""
+
+# (可选, 默认 true) 命令不可用时是否终止 play
+npm_command_bootstrap_required: true
+
+# (可选) required=true 且命令不可用时的自定义错误信息
+# npm_command_bootstrap_fail_message: ""
+
+# (可选) npm 安装后仍不可用时的自定义错误信息
+# npm_command_bootstrap_install_fail_message: ""

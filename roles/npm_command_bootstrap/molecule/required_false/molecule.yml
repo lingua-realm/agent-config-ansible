@@ -1,0 +1,17 @@
+---
+# 场景：命令不存在且 required=false，play 不应 fail，结果 available=false
+dependency:
+  name: galaxy
+driver:
+  name: podman
+platforms:
+  - name: instance-required-false
+    image: "node:lts-bookworm"
+    pre_build_image: true
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+verifier:
+  name: ansible

@@ -1,0 +1,22 @@
+---
+- name: Converge — 命令不存在且 required=false
+  hosts: all
+  tasks:
+    # nonexistent-cli 在任何镜像中都不存在
+    - name: 引导不存在的命令（required=false，不应 fail）
+      include_role:
+        name: npm_command_bootstrap
+      vars:
+        npm_command_bootstrap_key: nonexistent
+        npm_command_bootstrap_display_name: Nonexistent CLI
+        npm_command_bootstrap_command: nonexistent-cli
+        npm_command_bootstrap_version_command: nonexistent-cli --version
+        npm_command_bootstrap_required: false
+
+    - name: 断言 play 未 fail 且记录不可用状态
+      assert:
+        that:
+          - not (npm_command_bootstrap_results.nonexistent.available | bool)
+          - not (npm_command_bootstrap_results.nonexistent.installed_now | bool)
+        fail_msg: "required=false 场景结果不符合预期：{{ npm_command_bootstrap_results }}"
+        success_msg: "✓ required=false 场景通过"

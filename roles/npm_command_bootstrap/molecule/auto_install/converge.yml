@@ -1,0 +1,24 @@
+---
+- name: Converge — 命令不存在时自动 npm 安装
+  hosts: all
+  tasks:
+    # prettier 在 node:lts 镜像中默认不存在，适合测试自动安装流程
+    - name: 引导 prettier（容器中不存在，触发 npm install -g）
+      include_role:
+        name: npm_command_bootstrap
+      vars:
+        npm_command_bootstrap_key: prettier
+        npm_command_bootstrap_display_name: Prettier
+        npm_command_bootstrap_command: prettier
+        npm_command_bootstrap_version_command: prettier --version
+        npm_command_bootstrap_auto_install_npm: prettier
+        npm_command_bootstrap_required: true
+
+    - name: 断言 prettier 安装成功
+      assert:
+        that:
+          - npm_command_bootstrap_results.prettier.available | bool
+          - npm_command_bootstrap_results.prettier.path != ""
+          - npm_command_bootstrap_results.prettier.version != ""
+        fail_msg: "自动安装结果不符合预期：{{ npm_command_bootstrap_results }}"
+        success_msg: "✓ 自动安装场景通过"

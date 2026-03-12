@@ -1,0 +1,23 @@
+---
+- name: Converge — 命令已存在
+  hosts: all
+  tasks:
+    - name: 引导 node 命令（容器中已预装）
+      include_role:
+        name: npm_command_bootstrap
+      vars:
+        npm_command_bootstrap_key: node
+        npm_command_bootstrap_display_name: Node.js
+        npm_command_bootstrap_command: node
+        npm_command_bootstrap_version_command: node --version
+        npm_command_bootstrap_required: true
+
+    - name: 断言 node 可用且未触发安装
+      assert:
+        that:
+          - npm_command_bootstrap_results.node.available | bool
+          - npm_command_bootstrap_results.node.path != ""
+          - npm_command_bootstrap_results.node.version != ""
+          - not (npm_command_bootstrap_results.node.installed_now | bool)
+        fail_msg: "结果不符合预期：{{ npm_command_bootstrap_results }}"
+        success_msg: "✓ node 已存在场景通过"
