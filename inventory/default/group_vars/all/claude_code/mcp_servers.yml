@@ -20,6 +20,12 @@ claude_code_dot_claude_json_merge:
 
   # MCP 服务器配置
   mcpServers:
+    # Context7 API 文档检索
+    context7:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "@upstash/context7-mcp"]
+
     # 用于自动获取网络内容，并转换成 Markdown 格式给 Agent
     mcp-server-fetch:
       type: "stdio"
@@ -32,6 +38,12 @@ claude_code_dot_claude_json_merge:
       url: "https://mcp.deepwiki.com/mcp"
       headers: {}
 
+    # playwright 浏览器自动化
+    playwright:
+      type: "stdio"
+      command: "npx"
+      args: ["@playwright/mcp@latest"]
+
     # 联网搜索
     open-websearch:
       type: "stdio"
@@ -41,4 +53,10 @@ claude_code_dot_claude_json_merge:
         MODE: "stdio"
         DEFAULT_SEARCH_ENGINE: "duckduckgo"
         ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,brave"
-        
+
+    # Serena 代码分析和重构
+    serena:
+      type: "stdio"
+      command: "uvx"
+      args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+      startup_timeout_sec: 20

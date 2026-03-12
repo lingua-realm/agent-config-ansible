@@ -62,11 +62,6 @@ claude_code_settings:
   # ===== Claude 插件配置（来自官方市场） =====
   enabled_plugins:
     - "code-review@claude-plugins-official" # 官方 Code Review 插件，提供代码审查和改进建议能力
-    - "frontend-design@claude-plugins-official" # 官方 Frontend Design 插件，提供前端设计的Skill能力
-    - "playwright@claude-plugins-official" # 官方 Playwright 插件，提供浏览器自动化能力
-    - "context7@claude-plugins-official" # 官方 Context7 插件，提供API文档检索能力
-    - "serena@claude-plugins-official" # 官方 Serena 插件，提供代码分析和重构能力
     - "claude-md-management@claude-plugins-official" # 官方 Claude MD Management 插件，自动更新和维护 Markdown 文档能力
     - "feature-dev@claude-plugins-official" # 官方 Feature Dev 插件，提供功能开发规划和代码生成能力
-    - "skill-creator@claude-plugins-official" # 官方 Skill Creator 插件，提供自定义技能创建能力
     - "superpowers@claude-plugins-official" # Claude learns brainstorming, subagent development with code review, debugging, TDD, and skill authoring through Superpowers.

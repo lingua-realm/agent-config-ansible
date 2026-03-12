@@ -1,0 +1,25 @@
+# Agent Skills 相关设置
+# 这些设置会被转换成 managed_agent_skills role 的输入，供 setup_agent_skills.yml 使用
+
+# ===== skills CLI 配置 =====
+
+# skills CLI 命令名
+agent_skills_cli_command: skills
+
+# 获取 skills CLI 版本的命令
+agent_skills_cli_version_command: skills --version
+
+# skills CLI 不存在时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+agent_skills_auto_install_npm: skills
+
+# 是否要求 skills CLI 可用
+agent_skills_require_cli: true
+
+# 是否默认禁用遥测与跟踪
+agent_skills_disable_telemetry: true
+
+# 传给所有 skills CLI 调用的额外环境变量
+agent_skills_command_env: {}
+
+# project scope 条目的默认工作目录；为空时需在条目里单独提供 project_dir
+agent_skills_project_dir: ""

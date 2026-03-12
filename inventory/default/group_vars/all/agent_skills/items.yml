@@ -1,0 +1,28 @@
+# Agent Skills 声明式条目
+# 每个条目会被 playbooks/setup_agent_skills.yml 归一化后交给 managed_agent_skills role。
+#
+# 注意：present 条目必须显式提供 source / skills / agents。
+# source 需要在目标机可见：
+# - GitHub shorthand / Git URL：适合 local 与 remote
+# - 本地路径：通常只适用于 ansible_connection=local，或目标机已存在相同路径
+
+agent_skills_items: 
+  - name: 安装 anthropics/skills 官方相关 Skills
+    state: present
+    source: anthropics/skills
+    skills:
+      - frontend-design # 前端设计
+      - skill-creator # 创建自己的skill
+    agents:
+      - claude-code
+      - codex
+    scope: global
+#
+#   - name: 卸载 Claude 遗留 skill
+#     state: absent
+#     skills:
+#       - legacy-skill
+#     agents:
+#       - claude-code
+#     scope: global
+#

@@ -1,0 +1,84 @@
+---
+# playbooks/setup_agent_skills.yml
+# Agent Skills 声明式部署（基于本仓库 roles/managed_agent_skills）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将 agent_skills_* 变量桥接为 managed_agent_skills 所需的输入
+# 2. 执行 managed_agent_skills role，完成各 agent 的 skills 安装 / 卸载
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_agent_skills.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_agent_skills.yml -e "target_hosts=all"
+#
+# 默认变量目录：
+#   inventory/<profile>/group_vars/all/agent_skills/
+#     - settings.yml
+#     - items.yml
+#
+# 可选本地 source 目录：
+#   inventory/<profile>/agent_skills_assets/
+#
+# 注意：
+#   - present 条目必须显式提供 source / skills / agents
+#   - source 需要在目标机可见；如果使用 inventory 本地路径，通常只适用于 ansible_connection=local
+
+- name: Agent Skills 声明式部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 校验 Agent Skills 编排输入
+      assert:
+        that:
+          - (agent_skills_items | default([])) is sequence
+          - (agent_skills_items | default([])) is not string
+          - (agent_skills_cli_command | default('skills')) is string
+          - (agent_skills_cli_version_command | default('skills --version')) is string
+          - (agent_skills_auto_install_npm | default('skills')) is string
+          - (agent_skills_command_env | default({})) is mapping
+          - (agent_skills_project_dir | default('')) is string
+        fail_msg: >-
+          Agent Skills 编排输入无效：请检查 group_vars/all/agent_skills/settings.yml
+          与 items.yml 中的变量结构，尤其是 agent_skills_items、CLI 命令与 command_env。
+      tags:
+        - always
+
+    - name: 归一化 managed_agent_skills 输入变量
+      set_fact:
+        agent_skills_items_effective: "{{ agent_skills_items | default([]) }}"
+        agent_skills_cli_command_effective: "{{ agent_skills_cli_command | default('skills') }}"
+        agent_skills_cli_version_command_effective: "{{ agent_skills_cli_version_command | default('skills --version') }}"
+        agent_skills_auto_install_npm_effective: "{{ agent_skills_auto_install_npm | default('skills') }}"
+        agent_skills_require_cli_effective: "{{ agent_skills_require_cli | default(true) | bool }}"
+        agent_skills_disable_telemetry_effective: "{{ agent_skills_disable_telemetry | default(true) | bool }}"
+        agent_skills_command_env_effective: "{{ agent_skills_command_env | default({}) }}"
+        agent_skills_project_dir_effective: "{{ agent_skills_project_dir | default('') }}"
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 managed_agent_skills 角色
+      include_role:
+        name: managed_agent_skills
+      vars:
+        managed_agent_skills_items: "{{ agent_skills_items_effective }}"
+        managed_agent_skills_cli_command: "{{ agent_skills_cli_command_effective }}"
+        managed_agent_skills_cli_version_command: "{{ agent_skills_cli_version_command_effective }}"
+        managed_agent_skills_auto_install_npm: "{{ agent_skills_auto_install_npm_effective }}"
+        managed_agent_skills_require_cli: "{{ agent_skills_require_cli_effective }}"
+        managed_agent_skills_disable_telemetry: "{{ agent_skills_disable_telemetry_effective }}"
+        managed_agent_skills_command_env: "{{ agent_skills_command_env_effective }}"
+        managed_agent_skills_project_dir: "{{ agent_skills_project_dir_effective }}"
+      tags:
+        - always

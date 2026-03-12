@@ -15,9 +15,11 @@
       - managed_agent_skills_cli_version_command | length > 0
       - managed_agent_skills_command_env is mapping
       - managed_agent_skills_project_dir is string
+      - managed_agent_skills_universal_agents is sequence
+      - managed_agent_skills_universal_agents is not string
     fail_msg: >-
       managed_agent_skills 角色参数无效：请确保 items 为列表，cli_command / version_command 非空，
-      command_env 为对象，project_dir 为字符串。
+      command_env 为对象，project_dir 为字符串，universal_agents 为列表。
 
 - name: 归一化 managed_agent_skills 辅助变量
   set_fact:

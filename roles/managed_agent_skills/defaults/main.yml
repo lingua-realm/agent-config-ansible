@@ -22,3 +22,16 @@ managed_agent_skills_command_env: {}
 
 # (可选) project scope 的默认工作目录；为空时必须在条目里显式提供 project_dir
 managed_agent_skills_project_dir: ""
+
+# (可选) 走 .agents/skills 共享目录的 universal agents 列表。
+# 当前默认值基于 skills CLI 1.4.4 的 agent 定义。
+managed_agent_skills_universal_agents:
+  - amp
+  - cline
+  - codex
+  - cursor
+  - gemini-cli
+  - github-copilot
+  - kimi-cli
+  - opencode
+  - replit

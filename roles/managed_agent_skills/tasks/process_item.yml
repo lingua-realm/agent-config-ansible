@@ -59,7 +59,35 @@
         if ('*' in managed_agent_skills_item_normalized.agents)
         else managed_agent_skills_item_normalized.agents
       }}
+    managed_agent_skills_item_universal_agents: >-
+      {{
+        managed_agent_skills_universal_agents
+        if ('*' in managed_agent_skills_item_normalized.agents)
+        else (
+          managed_agent_skills_item_normalized.agents
+          | intersect(managed_agent_skills_universal_agents)
+        )
+      }}
+    managed_agent_skills_item_list_parse_script: |-
+      import json
+      import re
+      import subprocess
+      import sys
+
+      mode = sys.argv[1]
+      cmd = sys.argv[2:]
+      result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+      clean = re.sub(r'\x1b\[[0-9;]*m', '', result.stdout).strip()
+
+      if mode == 'canonical':
+          names = re.findall(r'(?m)^  ([^\s]+)\s+.*$', clean)
+      else:
+          names = re.findall(r'(?m)^  ([^\s]+)\s+.*\n\s+Agents:\s+(?!not linked$).+$', clean)
+
+      print(json.dumps(names))
     managed_agent_skills_item_present_names: []
+    managed_agent_skills_item_present_by_agent: {}
+    managed_agent_skills_item_canonical_present_names: []
     managed_agent_skills_item_missing_by_agent: {}
   changed_when: false
 
@@ -67,16 +95,37 @@
   set_fact:
     managed_agent_skills_item_probe_argv: >-
       {{
-        [managed_agent_skills_cli_command, 'list', '--json']
+        [managed_agent_skills_cli_command, 'list']
         + (['--global'] if managed_agent_skills_item_normalized.scope == 'global' else [])
       }}
   changed_when: false
+
+- name: 查询当前条目共享 skills 目录
+  command:
+    argv: >-
+      {{
+        ['python3', '-c', managed_agent_skills_item_list_parse_script, 'canonical']
+        + managed_agent_skills_item_probe_argv
+      }}
+  register: managed_agent_skills_item_canonical_probe
+  changed_when: false
+  environment: "{{ managed_agent_skills_item_env }}"
+  args:
+    chdir: "{{ managed_agent_skills_item_normalized.project_dir if managed_agent_skills_item_normalized.scope == 'project' else omit }}"
+  when: managed_agent_skills_item_universal_agents | length > 0
+
+- name: 汇总当前条目共享 skills 目录中的 skill 名称
+  set_fact:
+    managed_agent_skills_item_canonical_present_names: "{{ managed_agent_skills_item_canonical_probe.stdout | from_json }}"
+  changed_when: false
+  when: managed_agent_skills_item_universal_agents | length > 0
 
 - name: 查询当前条目已安装的 skills
   command:
     argv: >-
       {{
-        managed_agent_skills_item_probe_argv
+        ['python3', '-c', managed_agent_skills_item_list_parse_script, 'linked']
+        + managed_agent_skills_item_probe_argv
         + ([] if managed_agent_skills_probe_agent == '__all__' else ['-a', managed_agent_skills_probe_agent])
       }}
   register: managed_agent_skills_item_probe
@@ -94,13 +143,53 @@
     managed_agent_skills_item_present_names: >-
       {{
         managed_agent_skills_item_present_names
-        | union((managed_agent_skills_probe_result.stdout | from_json | map(attribute='name') | list))
+        | union(managed_agent_skills_probe_names)
+      }}
+    managed_agent_skills_item_present_by_agent: >-
+      {{
+        managed_agent_skills_item_present_by_agent
+        | combine(
+            {
+              managed_agent_skills_probe_result.managed_agent_skills_probe_agent: managed_agent_skills_probe_names
+            },
+            recursive=True
+          )
+      }}
+  vars:
+    managed_agent_skills_probe_names: >-
+      {{
+        managed_agent_skills_probe_result.stdout
+        | from_json
       }}
   loop: "{{ managed_agent_skills_item_probe.results }}"
   loop_control:
     loop_var: managed_agent_skills_probe_result
     label: "{{ managed_agent_skills_item_label }} -> {{ managed_agent_skills_probe_result.managed_agent_skills_probe_agent }}"
   changed_when: false
+
+- name: 汇总 universal agents 的共享 skills 结果
+  set_fact:
+    managed_agent_skills_item_present_names: >-
+      {{
+        managed_agent_skills_item_present_names
+        | union(managed_agent_skills_item_canonical_present_names)
+      }}
+    managed_agent_skills_item_present_by_agent: >-
+      {{
+        managed_agent_skills_item_present_by_agent
+        | combine(
+            {
+              managed_agent_skills_universal_agent: managed_agent_skills_item_canonical_present_names
+            },
+            recursive=True
+          )
+      }}
+  loop: "{{ managed_agent_skills_item_universal_agents }}"
+  loop_control:
+    loop_var: managed_agent_skills_universal_agent
+    label: "{{ managed_agent_skills_item_label }} -> {{ managed_agent_skills_universal_agent }}"
+  changed_when: false
+  when: managed_agent_skills_item_universal_agents | length > 0
 
 - name: 计算当前 present 条目的缺失 skill
   set_fact:
@@ -111,7 +200,11 @@
             {
               managed_agent_skills_probe_result.managed_agent_skills_probe_agent: (
                 managed_agent_skills_item_normalized.skills
-                | difference(managed_agent_skills_probe_result.stdout | from_json | map(attribute='name') | list)
+                | difference(
+                    managed_agent_skills_item_present_by_agent[
+                      managed_agent_skills_probe_result.managed_agent_skills_probe_agent
+                    ] | default([])
+                  )
               )
             },
             recursive=True

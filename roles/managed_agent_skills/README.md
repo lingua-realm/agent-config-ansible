@@ -21,6 +21,7 @@
 | `managed_agent_skills_disable_telemetry` | ❌ | `true` | 是否默认注入 `DISABLE_TELEMETRY=1` 和 `DO_NOT_TRACK=1` |
 | `managed_agent_skills_command_env` | ❌ | `{}` | 传给所有 skills CLI 调用的额外环境变量 |
 | `managed_agent_skills_project_dir` | ❌ | `""` | project scope 的默认工作目录 |
+| `managed_agent_skills_universal_agents` | ❌ | 当前内置 universal agents 列表 | 走 `.agents/skills` 共享目录的 agent 标识列表 |
 
 ## 条目结构
 
@@ -113,6 +114,6 @@ managed_agent_skills_result:
 
 ## 实现说明
 
-- role 先用 `skills list --json` 查询当前 scope + agent 的现状，再决定是否执行 `add` 或 `remove`。
+- role 基于 `skills list` 的文本输出做幂等探测；对于走 `.agents/skills` 的 universal agents，会额外探测共享目录中的 skill 名称，避免被 CLI 的 `not linked` 输出误判。
 - `global` 和 `project` 的实际 canonical 路径不由 role 自己推导，统一交给 skills CLI 负责。
 - 如果你已经在别处用文件同步直接管理某个 agent 的 `skills/` 目录，不要和这个 role 混用到同一目标目录。

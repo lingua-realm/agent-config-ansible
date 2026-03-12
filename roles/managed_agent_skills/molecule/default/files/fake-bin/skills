@@ -9,6 +9,11 @@ from pathlib import Path
 VERSION = "1.4.4-test"
 STATE_PATH = Path(os.environ.get("FAKE_SKILLS_STATE", "/tmp/fake-skills-state.json"))
 
+AGENT_DISPLAY_NAMES = {
+    "claude-code": "Claude Code",
+    "codex": "Codex",
+}
+
 
 def load_state() -> dict:
     if not STATE_PATH.exists():
@@ -72,8 +77,6 @@ def run_list(args: list[str]) -> int:
 
         if agents and "*" not in agents:
             filtered_agents = [agent for agent in installed_agents if agent in agents]
-            if not filtered_agents:
-                continue
 
         result.append(
             {
@@ -84,7 +87,22 @@ def run_list(args: list[str]) -> int:
             }
         )
 
-    print(json.dumps(result, indent=2))
+    if not result:
+        if is_global:
+            print("\u001b[38;5;102mNo global skills found.\u001b[0m")
+            print("\u001b[38;5;102mTry listing project skills without -g\u001b[0m")
+        else:
+            print("\u001b[38;5;102mNo project skills found.\u001b[0m")
+        return 0
+
+    print("Global Skills" if is_global else "Project Skills")
+    print()
+    print("Example Skills")
+    for item in result:
+        print(f"  {item['name']} {item['path']}")
+        agent_names = [AGENT_DISPLAY_NAMES.get(agent, agent) for agent in item["agents"]]
+        agent_info = ", ".join(agent_names) if agent_names else "not linked"
+        print(f"    Agents: {agent_info}")
     return 0
 
 

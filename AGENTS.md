@@ -21,6 +21,10 @@ uv run ansible-playbook playbooks/setup_claude_code.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_codex.yml
 uv run ansible-playbook playbooks/setup_codex.yml -e "target_hosts=all"
 
+# 运行 Playbook（声明式管理 Agent Skills）
+uv run ansible-playbook playbooks/setup_agent_skills.yml
+uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
+
 # Molecule 测试（需进入对应 role 目录）
 cd roles/<role-name>
 uv run molecule test                # 完整测试（含幂等性检查）
@@ -44,6 +48,9 @@ agent_claude_code（顶层编排）
 agent_codex（顶层编排）
   ├── npm_command_bootstrap    — 检查/安装 npm CLI 工具（codex）
   └── managed_file             — 管理 config.toml、.env 与 AGENTS.md
+
+managed_agent_skills（独立 skills 编排）
+  └── npm_command_bootstrap    — 检查/安装 skills CLI
 ```
 
 ### agent_claude_code 执行流程
@@ -86,11 +93,21 @@ inventory/<profile>/
   │       └── mcp_servers.yml  # Codex MCP 服务器配置
   └── codex_assets/            # 可选资产（自动发现）
       └── AGENTS.md
+
+inventory/<profile>/
+  ├── inventory.yml
+  ├── group_vars/all/
+  │   └── agent_skills/
+  │       ├── settings.yml     # skills CLI / role 编排设置
+  │       └── items.yml        # 声明式 skill 条目
+  └── agent_skills_assets/     # 可选本地 skill 源目录
 ```
 
 `claude_assets/` 下的资源由 playbook 自动发现，不存在则跳过。可通过变量 `claude_code_output_styles_src`、`claude_code_claude_md_src` 显式覆盖路径。Claude skills 不再由 `setup_claude_code.yml` 直接同步，建议改用 `managed_agent_skills` role 统一管理。
 
 `codex_assets/` 下的资源由 playbook 自动发现，不存在则跳过。可通过变量 `codex_agents_md_src` 显式覆盖路径。
+
+`setup_agent_skills.yml` 会递归加载 `group_vars/all/agent_skills/*.yml` 并把 `agent_skills_*` 变量桥接到 `managed_agent_skills`。其中 `source` 必须对目标机可见；仓库内本地路径通常只适用于本地连接，远端主机更建议使用 GitHub shorthand、Git URL，或者目标机上已有的本地路径。
 
 由于 Claude Code 变量拆在 `group_vars/all/claude_code/*.yml` 子目录中，顶层 playbook / 入口编排需要显式 `include_vars: dir={{ inventory_dir }}/group_vars/all` 递归加载，不能只依赖默认 inventory 自动加载行为。
 

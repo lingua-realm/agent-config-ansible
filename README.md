@@ -6,6 +6,18 @@
 
 - `playbooks/setup_claude_code.yml`：部署 Claude Code 配置
 - `playbooks/setup_codex.yml`：部署 Codex CLI 配置
+- `playbooks/setup_agent_skills.yml`：声明式管理 Claude Code、Codex 等 agent 的 skills
+
+## Agent Skills 变量目录
+
+`playbooks/setup_agent_skills.yml` 默认会从 `inventory/<profile>/group_vars/all/agent_skills/` 读取以下变量文件：
+
+- `settings.yml`
+- `items.yml`
+
+如果你希望在 inventory 里维护本地 skills 源目录，可以约定放在 `inventory/<profile>/agent_skills_assets/`，然后在 `items.yml` 里的 `source` 中引用对应路径。
+
+注意 `source` 必须在目标机上可见：`ansible_connection=local` 时可以直接引用仓库路径；远端主机场景更建议使用 GitHub shorthand、Git URL，或者目标机上已有的本地路径。
 
 ## Claude Code 资产目录
 
