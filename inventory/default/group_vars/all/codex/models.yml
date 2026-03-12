@@ -3,7 +3,7 @@
 # env 会渲染到 ~/.codex/.env
 
 codex_model_configs:
-  ppio_gpt54:
+  ppio_gpt5_4:
     model_provider: "ppio"
     model: "pa/gpt-5.4"
     model_reasoning_effort: "xhigh"
@@ -16,6 +16,6 @@ codex_model_configs:
         wire_api: "responses"
         env_key: "PPIO_API_KEY"
     env:
-      PPIO_API_KEY: "{{ secrets.api_keys.jdo_key }}"
+      PPIO_API_KEY: "{{ secrets.api_keys.ppio }}"
 
-codex_use_model: "ppio_gpt54"
+codex_use_model: "ppio_gpt5_4"
