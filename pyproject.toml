@@ -1,0 +1,15 @@
+[project]
+name = "agent-config-ansible"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ansible>=13.4.0",
+    "check-jsonschema>=0.37.0",
+]
+
+# Python 换源
+[tool.uv]
+index-url = "https://mirrors.aliyun.com/pypi/simple"
+package = true

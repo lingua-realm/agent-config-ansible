@@ -1,0 +1,11 @@
+{
+  "default": true,
+  "MD013": {
+    "line_length": 240,
+    "tables": false,
+    "code_blocks": false
+  },
+  "MD033": {
+    "allowed_elements": ["div"]
+  }
+}
