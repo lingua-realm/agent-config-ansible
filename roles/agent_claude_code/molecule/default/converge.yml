@@ -48,6 +48,11 @@
           {
             "untouched": true,
             "mcpServers": {
+              "mcp-server-fetch": {
+                "command": "uvx",
+                "args": ["mcp-server-fetch"],
+                "env": {}
+              },
               "existing": {
                 "command": "python3",
                 "args": ["existing.py"]
@@ -106,6 +111,10 @@
         agent_claude_code_user_json:
           hasCompletedOnboarding: true
           mcpServers:
+            mcp-server-fetch:
+              command: uvx
+              args:
+                - mcp-server-fetch
             local-demo:
               command: node
               args:

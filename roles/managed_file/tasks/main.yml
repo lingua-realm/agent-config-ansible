@@ -25,17 +25,6 @@
       managed_file_temp_path 不能与 managed_file_dest 相同；
       managed_file_compare_kind 仅支持 plain/json_sorted。
 
-- name: 检测控制端是否为交互式终端（{{ managed_file_display_name }}）
-  set_fact:
-    managed_file_interactive_terminal: >-
-      {{
-        lookup(
-          'ansible.builtin.pipe',
-          'if [ -t 0 ] && [ -t 1 ]; then echo true; else echo false; fi'
-        ) | trim == 'true'
-      }}
-  changed_when: false
-
 - name: 初始化 {{ managed_file_display_name }} 辅助变量
   set_fact:
     managed_file_existing_sorted_path: "{{ managed_file_temp_path }}.existing.sorted"
@@ -259,15 +248,6 @@
         - managed_file_changed | bool
         - not (managed_file_is_new | bool)
 
-    - name: 非交互环境下跳过 {{ managed_file_display_name }} 更新确认
-      debug:
-        msg: "检测到非交互终端，跳过 {{ managed_file_display_name }} 更新确认提示"
-      when:
-        - managed_file_changed | bool
-        - managed_file_confirm | bool
-        - not (managed_file_skip_confirm | bool)
-        - not (managed_file_interactive_terminal | bool)
-
     - name: 询问是否继续更新 {{ managed_file_display_name }}
       pause:
         prompt: |
@@ -287,7 +267,6 @@
         - managed_file_changed | bool
         - managed_file_confirm | bool
         - not (managed_file_skip_confirm | bool)
-        - managed_file_interactive_terminal | bool
       register: managed_file_user_confirmation
 
     - name: 确认用户选择（{{ managed_file_display_name }}）
@@ -297,7 +276,6 @@
         - managed_file_changed | bool
         - managed_file_confirm | bool
         - not (managed_file_skip_confirm | bool)
-        - managed_file_interactive_terminal | bool
         - managed_file_user_confirmation.user_input | default('') | lower not in ['yes', 'y']
 
     - name: 更新 {{ managed_file_display_name }}

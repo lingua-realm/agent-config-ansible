@@ -25,6 +25,7 @@
 - 现有目标文件和 patch 模板都必须解析为 JSON/YAML 对象。
 - merge 使用递归对象合并；数组采用 replace 策略，新数组会覆盖旧数组。
 - 实际文件管理流程复用 managed_file，因此比较模式固定为 `json_sorted`。
+- `managed_json_merge_confirm: true` 时最终会通过 managed_file 的 `pause` 交互确认；非交互执行请配合 `managed_json_merge_skip_confirm: true` 使用。
 
 ## 输出
 

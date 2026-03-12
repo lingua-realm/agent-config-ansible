@@ -18,6 +18,8 @@
     managed_file_compare_kind: json_sorted
     managed_file_confirm: "{{ agent_claude_code_confirm_settings_update }}"
     managed_file_backup: "{{ agent_claude_code_backup }}"
+    managed_file_backup_dir: "{{ agent_claude_code_settings_backup_dir }}"
+    managed_file_backup_prefix: "{{ agent_claude_code_settings_backup_prefix }}"
 
 - name: 记录 settings.json 同步结果
   set_fact:

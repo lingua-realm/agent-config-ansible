@@ -42,6 +42,10 @@
         agent_claude_code_user_json:
           hasCompletedOnboarding: true
           mcpServers:
+            mcp-server-fetch:
+              command: uvx
+              args:
+                - mcp-server-fetch
             local-demo:
               command: node
               args:
@@ -105,6 +109,9 @@
           - (agent_claude_code_user_json_final.content | b64decode | from_json).untouched == true
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['local-demo'].command == 'node'
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers.existing.command == 'python3'
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].command == 'uvx'
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].args == ['mcp-server-fetch']
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].env == {}
           - agent_claude_code_output_style_custom.stat.exists
           - not agent_claude_code_output_style_legacy.stat.exists
           - agent_claude_code_skill_demo.stat.exists

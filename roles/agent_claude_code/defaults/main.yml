@@ -33,6 +33,36 @@ agent_claude_code_confirm_user_json_update: false
 # 是否为 settings.json / ~/.claude.json / CLAUDE.md 创建备份
 agent_claude_code_backup: true
 
+# 统一备份根目录；为空时回退到各托管文件默认的就地备份目录
+agent_claude_code_backup_root: ""
+
+# settings.json 备份目录与前缀
+agent_claude_code_settings_backup_dir: >-
+  {{
+    ((agent_claude_code_backup_root | regex_replace('/+$', '')) ~ '/settings')
+    if (agent_claude_code_backup_root | length > 0)
+    else ((agent_claude_code_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_claude_code_settings_backup_prefix: settings.json
+
+# ~/.claude.json 备份目录与前缀
+agent_claude_code_user_json_backup_dir: >-
+  {{
+    ((agent_claude_code_backup_root | regex_replace('/+$', '')) ~ '/user-json')
+    if (agent_claude_code_backup_root | length > 0)
+    else ((agent_claude_code_user_json_path | dirname) ~ '/.managed_json_merge_backups')
+  }}
+agent_claude_code_user_json_backup_prefix: claude.json
+
+# CLAUDE.md 备份目录与前缀
+agent_claude_code_claude_md_backup_dir: >-
+  {{
+    ((agent_claude_code_backup_root | regex_replace('/+$', '')) ~ '/claude-md')
+    if (agent_claude_code_backup_root | length > 0)
+    else ((agent_claude_code_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_claude_code_claude_md_backup_prefix: CLAUDE.md
+
 # 插件 marketplace 映射；当插件 ID 以 @marketplace 结尾时会用到
 agent_claude_code_plugin_marketplaces:
   claude-plugins-official: https://github.com/anthropics/claude-plugins-official.git

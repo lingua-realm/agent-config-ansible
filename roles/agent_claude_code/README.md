@@ -35,6 +35,7 @@
 | `agent_claude_code_confirm_settings_update` | ❌ | `false` | settings.json 变更时是否交互确认 |
 | `agent_claude_code_confirm_user_json_update` | ❌ | `false` | `~/.claude.json` 变更时是否交互确认 |
 | `agent_claude_code_backup` | ❌ | `true` | 是否为托管文件创建备份 |
+| `agent_claude_code_backup_root` | ❌ | `""` | 统一备份根目录；设置后会自动派生 `settings/`、`user-json/`、`claude-md/` 子目录 |
 | `agent_claude_code_plugin_marketplaces` | ❌ | 内置官方 marketplace | 插件 marketplace 名称到 URL 的映射 |
 | `agent_claude_code_plugins_to_install` | ❌ | `[]` | 显式安装的插件列表；为空时回退到 `settings.enabledPlugins` |
 | `agent_claude_code_settings` | ✅ | 见 defaults | 用于生成 `settings.json` 的配置对象 |
@@ -140,3 +141,5 @@ agent_claude_code_result:
 - 本 role 不管理 `agents` 目录，也不会主动创建它。
 - `agent_claude_code_plugins_to_install` 为空时，会自动使用 `agent_claude_code_settings.enabledPlugins` 作为插件安装目标。
 - `agent_claude_code_output_styles_src` 和 `agent_claude_code_skills_src` 会自动归一化为以 `/` 结尾的目录同步语义。
+- `agent_claude_code_confirm_settings_update` 和 `agent_claude_code_confirm_user_json_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
+- 设置 `agent_claude_code_backup_root` 后，`settings.json`、`~/.claude.json` 和 `CLAUDE.md` 的备份会分别写入其下的 `settings/`、`user-json/`、`claude-md/` 子目录。

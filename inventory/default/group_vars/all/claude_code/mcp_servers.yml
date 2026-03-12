@@ -1,0 +1,44 @@
+# ===== claude.json 增量合并配置 =====
+# 以下配置会递归深度合并到 ~/.claude.json
+# 仅覆盖声明的 key，未声明的保持原样
+#
+# 变量结构：
+#   claude_code_dot_claude_json_merge:
+#     confirm_claude_json_update: bool  # 同步前是否需要人工确认
+#     mcpServers:                       # MCP 服务器配置（字典格式）
+#       <server-name>:
+#         type: "stdio" | "http"
+#         command: ...                  # stdio 类型
+#         args: [...]                   # stdio 类型
+#         env: {...}                    # stdio 类型（可选）
+#         url: ...                      # http 类型
+#         headers: {...}               # http 类型（可选）
+
+claude_code_dot_claude_json_merge:
+  # 同步前如果存在配置变更，是否需要人工确认
+  confirm_claude_json_update: true
+
+  # MCP 服务器配置
+  mcpServers:
+    # 用于自动获取网络内容，并转换成 Markdown 格式给 Agent
+    mcp-server-fetch:
+      type: "stdio"
+      command: "uvx"
+      args: ["mcp-server-fetch"]
+
+    # 用于自动联网搜索开源仓库信息
+    deepwiki:
+      type: "http"
+      url: "https://mcp.deepwiki.com/mcp"
+      headers: {}
+
+    # 联网搜索
+    open-websearch:
+      type: "stdio"
+      command: "npx"
+      args: ["-y", "open-websearch@latest"]
+      env:  
+        MODE: "stdio"
+        DEFAULT_SEARCH_ENGINE: "duckduckgo"
+        ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,brave"
+        

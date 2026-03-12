@@ -1,0 +1,72 @@
+# Claude Code 相关设置
+# 这些设置会被转换成 settings.json 的内容，供 Claude Code 使用
+# 详细配置项说明请参考官方文档：https://code.claude.com/docs/en/settings
+
+claude_code_settings:
+  # ===== 部署配置 =====
+  # 是否在更新 settings.json 前要求人工确认（true/false）
+  confirm_settings_update: true
+
+  # ===== 模型配置 =====
+  model: "opus"
+
+  # ==== 开启深度思考模式 ====
+  alwaysThinkingEnabled: true
+  env:
+    ANTHROPIC_BASE_URL: "{{ model_configs[claude_code_use_model].baseURL }}"
+    ANTHROPIC_API_KEY: "{{ model_configs[claude_code_use_model].api_key }}"
+    ANTHROPIC_DEFAULT_OPUS_MODEL: "{{ model_configs[claude_code_use_model].opus_model }}"
+    ANTHROPIC_DEFAULT_SONNET_MODEL: "{{ model_configs[claude_code_use_model].sonnet_model }}"
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: "{{ model_configs[claude_code_use_model].haiku_model }}"
+    CLAUDE_CODE_SUBAGENT_MODEL: "{{ model_configs[claude_code_use_model].claude_code_subagent }}"
+    # 隐私与遥测控制
+    DISABLE_TELEMETRY: "1"
+    DISABLE_ERROR_REPORTING: "1"
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
+    # MCP 超时时间（毫秒）
+    MCP_TIMEOUT: "30000"
+
+  # ===== 输出风格与语言 =====
+  outputStyle: "engineer-professional.md"
+  # 首选响应语言（如 zh-CN、en、ja），比 CLAUDE.md 中的指令更底层可靠
+  language: "zh-CN"
+
+  # ===== 权限配置 =====
+  permissions:
+    # 默认权限模式：default / acceptEdits / plan / dontAsk / bypassPermissions / delegate
+    defaultMode: "default"
+    allow:
+      - Bash
+      - Edit
+      - Glob
+      - Grep
+      - KillShell
+      - NotebookEdit
+      - Read
+      - Task
+      - TodoWrite
+      - WebFetch
+      # - WebSearch # 不要使用自带的联网搜索
+      - Write
+      - mcp__open-websearch__search
+      - mcp__open-websearch__fetchLinuxDoArticle
+      - mcp__open-websearch__fetchGithubReadme
+      - mcp__context7__resolve-library-id
+      - mcp__serena__get_current_config
+    deny: []
+
+  # ===== 会话与存储 =====
+  # 聊天记录保留天数（0 = 永不清理）
+  cleanupPeriodDays: 60
+
+  # ===== Claude 插件配置（来自官方市场） =====
+  enabled_plugins:
+    - "code-review@claude-plugins-official" # 官方 Code Review 插件，提供代码审查和改进建议能力
+    - "frontend-design@claude-plugins-official" # 官方 Frontend Design 插件，提供前端设计的Skill能力
+    - "playwright@claude-plugins-official" # 官方 Playwright 插件，提供浏览器自动化能力
+    - "context7@claude-plugins-official" # 官方 Context7 插件，提供API文档检索能力
+    - "serena@claude-plugins-official" # 官方 Serena 插件，提供代码分析和重构能力
+    - "claude-md-management@claude-plugins-official" # 官方 Claude MD Management 插件，自动更新和维护 Markdown 文档能力
+    - "feature-dev@claude-plugins-official" # 官方 Feature Dev 插件，提供功能开发规划和代码生成能力
+    - "skill-creator@claude-plugins-official" # 官方 Skill Creator 插件，提供自定义技能创建能力
+    - "superpowers@claude-plugins-official" # Claude learns brainstorming, subagent development with code review, debugging, TDD, and skill authoring through Superpowers.

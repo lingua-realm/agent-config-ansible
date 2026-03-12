@@ -16,6 +16,8 @@
     managed_json_merge_temp_path: "{{ agent_claude_code_temp_root }}/claude.json.rendered"
     managed_json_merge_confirm: "{{ agent_claude_code_confirm_user_json_update }}"
     managed_json_merge_backup: "{{ agent_claude_code_backup }}"
+    managed_json_merge_backup_dir: "{{ agent_claude_code_user_json_backup_dir }}"
+    managed_json_merge_backup_prefix: "{{ agent_claude_code_user_json_backup_prefix }}"
 
 - name: 记录 ~/.claude.json 同步结果
   set_fact:

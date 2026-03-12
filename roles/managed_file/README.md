@@ -20,7 +20,7 @@
 | `managed_file_backup_dir` | ❌ | 目标目录下的 `.managed_file_backups` | 备份目录 |
 | `managed_file_backup_prefix` | ❌ | 目标文件名 | 备份文件名前缀 |
 | `managed_file_confirm` | ❌ | `false` | 检测到变更时是否交互确认 |
-| `managed_file_skip_confirm` | ❌ | `false` | 强制跳过交互确认 |
+| `managed_file_skip_confirm` | ❌ | `false` | 强制跳过交互确认；适用于非交互执行 |
 | `managed_file_cleanup_temp` | ❌ | `true` | 任务结束后是否删除远端临时文件 |
 
 ## 输出
@@ -61,3 +61,4 @@ managed_file_result:
 - `plain` 会直接比较目标文件和临时文件。
 - `json_sorted` 会先把 JSON 解析并按 key 排序后再比较，但只有检测到语义差异时才会覆盖目标文件。
 - `managed_file_template_src`、`managed_file_copy_src` 和 `managed_file_content` 必须三选一，不能同时提供多个，也不能全部省略。
+- `managed_file_confirm: true` 时会直接使用 `pause` 等待用户输入确认；如果是无人值守执行，请显式设置 `managed_file_skip_confirm: true` 或关闭确认。

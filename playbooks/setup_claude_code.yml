@@ -1,0 +1,218 @@
+---
+# playbooks/setup_claude_code.yml
+# Claude Code 配置部署（基于本仓库 roles/agent_claude_code）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将当前仓库的 claude_code_* 变量桥接为 agent_claude_code 所需的输入
+# 2. 执行 agent_claude_code role，完成 settings.json、~/.claude.json、插件与可选资源同步
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_claude_code.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_claude_code.yml -e "target_hosts=all"
+#
+# 默认资源目录：
+#   inventory/<profile>/claude_assets/
+#     - skills/
+#     - output-styles/
+#     - CLAUDE.md
+#
+# 默认备份目录（本地连接时）：
+#   <repo>/tmps/claude-code-backups/<inventory_hostname>/
+#     - settings/
+#     - user-json/
+#     - claude-md/
+#
+# 可选覆盖外部资源：
+#   -e "claude_code_skills_src=/path/to/skills"
+#   -e "claude_code_output_styles_src=/path/to/output-styles"
+#   -e "claude_code_claude_md_src=/path/to/CLAUDE.md"
+
+- name: Claude Code 配置部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 兼容当前 settings.yml 使用的 model_configs 变量名
+      set_fact:
+        model_configs: "{{ claude_code_model_configs | default(model_configs | default({})) }}"
+      tags:
+        - always
+
+    - name: 计算 Claude 资产目录
+      set_fact:
+        claude_code_assets_dir_effective: "{{ claude_code_assets_dir | default(inventory_dir ~ '/claude_assets') }}"
+      tags:
+        - always
+
+    - name: 计算 Claude 备份根目录
+      set_fact:
+        claude_code_backup_root_effective: >-
+          {{
+            claude_code_backup_root
+            if (claude_code_backup_root is defined)
+            else (
+              (((inventory_dir | dirname) | dirname) ~ '/tmps/claude-code-backups/' ~ inventory_hostname)
+              if ((ansible_connection | default('ssh')) == 'local')
+              else ''
+            )
+          }}
+      tags:
+        - always
+
+    - name: 检查默认 skills 目录
+      stat:
+        path: "{{ claude_code_assets_dir_effective }}/skills"
+      register: claude_code_default_skills_dir
+      tags:
+        - always
+
+    - name: 检查默认 output-styles 目录
+      stat:
+        path: "{{ claude_code_assets_dir_effective }}/output-styles"
+      register: claude_code_default_output_styles_dir
+      tags:
+        - always
+
+    - name: 检查默认 CLAUDE.md 文件
+      stat:
+        path: "{{ claude_code_assets_dir_effective }}/CLAUDE.md"
+      register: claude_code_default_claude_md
+      tags:
+        - always
+
+    - name: 校验 Claude Code 编排输入
+      assert:
+        that:
+          - claude_code_settings is mapping
+          - claude_code_model_configs is mapping
+          - claude_code_use_model is string
+          - claude_code_use_model | length > 0
+          - claude_code_use_model in claude_code_model_configs
+          - claude_code_dot_claude_json_merge is mapping
+          - (claude_code_settings.enabled_plugins | default([])) is sequence
+          - (claude_code_settings.enabled_plugins | default([])) is not string
+          - (claude_code_dot_claude_json_merge.mcpServers | default({})) is mapping
+        fail_msg: >-
+          Claude Code 编排输入无效：请检查 claude_code/settings.yml、models.yml、mcp_servers.yml
+          中的变量结构，尤其是 claude_code_use_model、enabled_plugins 与 mcpServers。
+      tags:
+        - always
+
+    - name: 归一化 agent_claude_code 输入变量
+      set_fact:
+        claude_code_skills_src_effective: >-
+          {{
+            claude_code_skills_src
+            if (claude_code_skills_src is defined)
+            else (
+              (claude_code_assets_dir_effective ~ '/skills')
+              if (claude_code_default_skills_dir.stat.isdir | default(false))
+              else ''
+            )
+          }}
+        claude_code_output_styles_src_effective: >-
+          {{
+            claude_code_output_styles_src
+            if (claude_code_output_styles_src is defined)
+            else (
+              (claude_code_assets_dir_effective ~ '/output-styles')
+              if (claude_code_default_output_styles_dir.stat.isdir | default(false))
+              else ''
+            )
+          }}
+        claude_code_claude_md_src_effective: >-
+          {{
+            claude_code_claude_md_src
+            if (claude_code_claude_md_src is defined)
+            else (
+              (claude_code_assets_dir_effective ~ '/CLAUDE.md')
+              if (claude_code_default_claude_md.stat.isreg | default(false))
+              else ''
+            )
+          }}
+        claude_code_settings_effective: >-
+          {{
+            (
+              claude_code_settings
+              | dict2items
+              | rejectattr('key', 'equalto', 'confirm_settings_update')
+              | rejectattr('key', 'equalto', 'enabled_plugins')
+              | items2dict
+            )
+            | combine(
+                {
+                  'enabledPlugins': (
+                    claude_code_settings.enabledPlugins
+                    | default(claude_code_settings.enabled_plugins | default([]))
+                  )
+                },
+                recursive=True
+              )
+          }}
+        claude_code_user_json_effective: >-
+          {{
+            claude_code_dot_claude_json_merge
+            | dict2items
+            | rejectattr('key', 'equalto', 'confirm_claude_json_update')
+            | items2dict
+          }}
+        claude_code_plugins_to_install_effective: >-
+          {{
+            claude_code_plugins_to_install
+            | default(
+                claude_code_settings.enabledPlugins
+                | default(claude_code_settings.enabled_plugins | default([]))
+              )
+          }}
+        claude_code_plugin_marketplaces_effective: >-
+          {{
+            {
+              'claude-plugins-official': 'https://github.com/anthropics/claude-plugins-official.git'
+            }
+            | combine(claude_code_plugin_marketplaces | default({}), recursive=True)
+          }}
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 agent_claude_code 角色
+      include_role:
+        name: agent_claude_code
+      vars:
+        agent_claude_code_home_dir: "{{ claude_code_home_dir | default(lookup('env', 'HOME') ~ '/.claude') }}"
+        agent_claude_code_user_json_path: "{{ claude_code_user_json_path | default(lookup('env', 'HOME') ~ '/.claude.json') }}"
+        agent_claude_code_temp_root: "{{ claude_code_temp_root | default('/tmp/agent-claude-code') }}"
+        agent_claude_code_require_claude_cli: "{{ claude_code_require_claude_cli | default(true) | bool }}"
+        agent_claude_code_require_ccline: "{{ claude_code_require_ccline | default(true) | bool }}"
+        agent_claude_code_ccline_auto_install_npm: "{{ claude_code_ccline_auto_install_npm | default('@cometix/ccline') }}"
+        agent_claude_code_manage_plugins: "{{ claude_code_manage_plugins | default(true) | bool }}"
+        agent_claude_code_manage_user_json: "{{ claude_code_manage_user_json | default(true) | bool }}"
+        agent_claude_code_manage_settings: "{{ claude_code_manage_settings | default(true) | bool }}"
+        agent_claude_code_run_verify: "{{ claude_code_run_verify | default(true) | bool }}"
+        agent_claude_code_verify_schema: "{{ claude_code_verify_schema | default(false) | bool }}"
+        agent_claude_code_confirm_settings_update: "{{ claude_code_settings.confirm_settings_update | default(false) | bool }}"
+        agent_claude_code_confirm_user_json_update: "{{ claude_code_dot_claude_json_merge.confirm_claude_json_update | default(false) | bool }}"
+        agent_claude_code_backup: "{{ claude_code_backup | default(true) | bool }}"
+        agent_claude_code_backup_root: "{{ claude_code_backup_root_effective }}"
+        agent_claude_code_plugin_marketplaces: "{{ claude_code_plugin_marketplaces_effective }}"
+        agent_claude_code_plugins_to_install: "{{ claude_code_plugins_to_install_effective }}"
+        agent_claude_code_settings: "{{ claude_code_settings_effective }}"
+        agent_claude_code_user_json: "{{ claude_code_user_json_effective }}"
+        agent_claude_code_skills_src: "{{ claude_code_skills_src_effective }}"
+        agent_claude_code_output_styles_src: "{{ claude_code_output_styles_src_effective }}"
+        agent_claude_code_claude_md_src: "{{ claude_code_claude_md_src_effective }}"
+        agent_claude_code_skills_delete: "{{ claude_code_skills_delete | default(true) | bool }}"
+        agent_claude_code_output_styles_delete: "{{ claude_code_output_styles_delete | default(true) | bool }}"
+      tags:
+        - always

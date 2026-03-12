@@ -106,9 +106,15 @@
   assert:
     that:
       - agent_claude_code_user_json_data.mcpServers[item.key] is defined
-      - agent_claude_code_user_json_data.mcpServers[item.key] == item.value
-    fail_msg: "~/.claude.json 中的 MCP Server {{ item.key }} 不匹配"
-    success_msg: "✓ MCP Server {{ item.key }} 配置正确"
+      - agent_claude_code_user_json_data.mcpServers[item.key] is mapping
+      - >-
+        agent_claude_code_user_json_data.mcpServers[item.key]
+        == (
+          agent_claude_code_user_json_data.mcpServers[item.key]
+          | combine(item.value, recursive=True, list_merge='replace')
+        )
+    fail_msg: "~/.claude.json 中的 MCP Server {{ item.key }} 未至少包含期望配置"
+    success_msg: "✓ MCP Server {{ item.key }} 至少包含期望配置"
   loop: "{{ agent_claude_code_user_json_normalized.mcpServers | dict2items }}"
   loop_control:
     label: "{{ item.key }}"

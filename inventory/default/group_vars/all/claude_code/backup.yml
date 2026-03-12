@@ -1,0 +1,11 @@
+# Claude Code 备份目录
+#
+# 本地执行默认放到当前仓库 tmps 下，便于集中查看与清理；
+# 如果切到远端主机执行，默认回退为空字符串，继续使用各目标文件旁边的默认备份目录。
+
+claude_code_backup_root: >-
+  {{
+    (((inventory_dir | dirname) | dirname) ~ '/tmps/claude-code-backups/' ~ inventory_hostname)
+    if ((ansible_connection | default('ssh')) == 'local')
+    else ''
+  }}

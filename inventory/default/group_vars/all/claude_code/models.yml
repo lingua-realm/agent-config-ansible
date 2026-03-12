@@ -1,0 +1,19 @@
+# 模型配置
+claude_code_model_configs:
+  # 模型配置示例，实际使用时请根据需要修改或删除
+  volces_doubao:
+    baseURL: https://ark.cn-beijing.volces.com/api/coding
+    api_key: "{{ secrets.api_keys.volces }}"
+    opus_model: "doubao-seed-2.0-code"
+    sonnet_model: "doubao-seed-2.0-code"
+    haiku_model: "doubao-seed-2.0-code"
+    claude_code_subagent: "doubao-seed-2.0-code"
+  volces_kimi_k2_5:
+    baseURL: https://ark.cn-beijing.volces.com/api/coding
+    api_key: "{{ secrets.api_keys.volces }}"
+    opus_model: "kimi-k2.5"
+    sonnet_model: "kimi-k2.5"
+    haiku_model: "kimi-k2.5"
+    claude_code_subagent: "kimi-k2.5"
+
+claude_code_use_model: "volces_doubao"
