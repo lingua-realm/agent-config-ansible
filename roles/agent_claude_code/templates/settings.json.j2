@@ -1,0 +1,34 @@
+{% set settings_data = {
+  '$schema': 'https://json.schemastore.org/claude-code-settings.json',
+  'env': agent_claude_code_settings_normalized.env,
+  'model': agent_claude_code_settings_normalized.model,
+  'alwaysThinkingEnabled': agent_claude_code_settings_normalized.alwaysThinkingEnabled | bool,
+  'outputStyle': agent_claude_code_settings_normalized.outputStyle,
+  'permissions': {
+    'allow': agent_claude_code_settings_normalized.permissions.allow,
+    'deny': agent_claude_code_settings_normalized.permissions.deny
+  },
+  'attribution': {
+    'commit': '',
+    'pr': ''
+  },
+  'cleanupPeriodDays': agent_claude_code_settings_normalized.cleanupPeriodDays,
+  'hooks': agent_claude_code_settings_normalized.hooks
+} %}
+{% if agent_claude_code_settings_normalized.permissions.defaultMode is defined and agent_claude_code_settings_normalized.permissions.defaultMode != 'default' %}
+{% set settings_data = settings_data | combine({'permissions': {'defaultMode': agent_claude_code_settings_normalized.permissions.defaultMode}}, recursive=True) %}
+{% endif %}
+{% if agent_claude_code_settings_normalized.language is defined and agent_claude_code_settings_normalized.language | length > 0 %}
+{% set settings_data = settings_data | combine({'language': agent_claude_code_settings_normalized.language}, recursive=True) %}
+{% endif %}
+{% if agent_claude_code_settings_normalized.statusLine is mapping and agent_claude_code_settings_normalized.statusLine | length > 0 %}
+{% set settings_data = settings_data | combine({'statusLine': agent_claude_code_settings_normalized.statusLine}, recursive=True) %}
+{% endif %}
+{% if agent_claude_code_settings_normalized.enabledPlugins | length > 0 %}
+{% set ns = namespace(enabled_plugins_map={}) %}
+{% for plugin in agent_claude_code_settings_normalized.enabledPlugins %}
+{% set ns.enabled_plugins_map = ns.enabled_plugins_map | combine({plugin: true}) %}
+{% endfor %}
+{% set settings_data = settings_data | combine({'enabledPlugins': ns.enabled_plugins_map}, recursive=True) %}
+{% endif %}
+{{ settings_data | to_nice_json(sort_keys=True) }}

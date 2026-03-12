@@ -1,0 +1,23 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 3：同步 ~/.claude.json
+      ========================================
+
+- name: 通过 deep merge 同步 ~/.claude.json
+  include_role:
+    name: managed_json_merge
+  vars:
+    managed_json_merge_display_name: claude.json
+    managed_json_merge_dest: "{{ agent_claude_code_user_json_path }}"
+    managed_json_merge_template_src: "{{ agent_claude_code_role_path }}/templates/claude.yml.j2"
+    managed_json_merge_temp_path: "{{ agent_claude_code_temp_root }}/claude.json.rendered"
+    managed_json_merge_confirm: "{{ agent_claude_code_confirm_user_json_update }}"
+    managed_json_merge_backup: "{{ agent_claude_code_backup }}"
+
+- name: 记录 ~/.claude.json 同步结果
+  set_fact:
+    agent_claude_code_user_json_result: "{{ managed_json_merge_result }}"
+  changed_when: false

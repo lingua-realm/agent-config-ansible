@@ -1,0 +1,116 @@
+---
+- name: Verify — Claude Code 自动化配置幂等
+  hosts: all
+  environment:
+    PATH: "{{ agent_claude_code_fake_bin }}:{{ ansible_env.PATH }}"
+    FAKE_CLAUDE_STATE_DIR: "{{ agent_claude_code_test_root }}/state"
+  vars:
+    agent_claude_code_test_root: /tmp/agent-claude-code/default
+    agent_claude_code_fake_bin: "{{ agent_claude_code_test_root }}/fake-bin"
+    agent_claude_code_home_dir_test: "{{ agent_claude_code_test_root }}/home/.claude"
+    agent_claude_code_user_json_path_test: "{{ agent_claude_code_test_root }}/home/.claude.json"
+  tasks:
+    - name: 再次执行 agent_claude_code 角色
+      include_role:
+        name: agent_claude_code
+      vars:
+        agent_claude_code_home_dir: "{{ agent_claude_code_home_dir_test }}"
+        agent_claude_code_user_json_path: "{{ agent_claude_code_user_json_path_test }}"
+        agent_claude_code_temp_root: "{{ agent_claude_code_test_root }}/tmp"
+        agent_claude_code_settings:
+          env:
+            ANTHROPIC_API_KEY: test-key
+            ANTHROPIC_BASE_URL: https://example.test
+          model: claude-sonnet-4-5
+          alwaysThinkingEnabled: true
+          outputStyle: custom-style
+          language: zh-CN
+          permissions:
+            defaultMode: default
+            allow:
+              - Read(*)
+              - Edit(*)
+            deny: []
+          cleanupPeriodDays: 14
+          hooks: {}
+          enabledPlugins:
+            - test-plugin@claude-plugins-official
+          statusLine:
+            type: command
+            command: ccline
+            padding: 0
+        agent_claude_code_user_json:
+          hasCompletedOnboarding: true
+          mcpServers:
+            local-demo:
+              command: node
+              args:
+                - server.js
+        agent_claude_code_skills_src: "{{ playbook_dir }}/files/skills"
+        agent_claude_code_output_styles_src: "{{ playbook_dir }}/files/output-styles"
+        agent_claude_code_claude_md_src: "{{ playbook_dir }}/files/CLAUDE.md"
+        agent_claude_code_verify_schema: false
+
+    - name: 读取 settings.json
+      slurp:
+        src: "{{ agent_claude_code_home_dir_test }}/settings.json"
+      register: agent_claude_code_settings_json_final
+
+    - name: 读取 ~/.claude.json
+      slurp:
+        src: "{{ agent_claude_code_user_json_path_test }}"
+      register: agent_claude_code_user_json_final
+
+    - name: 检查自定义 output-style 已同步
+      stat:
+        path: "{{ agent_claude_code_home_dir_test }}/output-styles/custom-style.md"
+      register: agent_claude_code_output_style_custom
+
+    - name: 检查陈旧 output-style 已删除
+      stat:
+        path: "{{ agent_claude_code_home_dir_test }}/output-styles/legacy.md"
+      register: agent_claude_code_output_style_legacy
+
+    - name: 检查自定义 skill 已同步
+      stat:
+        path: "{{ agent_claude_code_home_dir_test }}/skills/demo-skill/SKILL.md"
+      register: agent_claude_code_skill_demo
+
+    - name: 检查陈旧 skill 已删除
+      stat:
+        path: "{{ agent_claude_code_home_dir_test }}/skills/legacy-skill"
+      register: agent_claude_code_skill_legacy
+
+    - name: 检查 CLAUDE.md 已同步
+      stat:
+        path: "{{ agent_claude_code_home_dir_test }}/CLAUDE.md"
+      register: agent_claude_code_claude_md_final
+
+    - name: 检查 agents 目录未被创建
+      stat:
+        path: "{{ agent_claude_code_home_dir_test }}/agents"
+      register: agent_claude_code_agents_dir
+
+    - name: 读取假 Claude 状态
+      slurp:
+        src: "{{ agent_claude_code_test_root }}/state/plugins.json"
+      register: agent_claude_code_plugins_state
+
+    - name: 断言第二次执行保持幂等
+      assert:
+        that:
+          - not (agent_claude_code_result.changed | bool)
+          - (agent_claude_code_settings_json_final.content | b64decode | from_json).outputStyle == 'custom-style'
+          - (agent_claude_code_settings_json_final.content | b64decode | from_json).env.ANTHROPIC_API_KEY == 'test-key'
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).untouched == true
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['local-demo'].command == 'node'
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers.existing.command == 'python3'
+          - agent_claude_code_output_style_custom.stat.exists
+          - not agent_claude_code_output_style_legacy.stat.exists
+          - agent_claude_code_skill_demo.stat.exists
+          - not agent_claude_code_skill_legacy.stat.exists
+          - agent_claude_code_claude_md_final.stat.exists
+          - not agent_claude_code_agents_dir.stat.exists
+          - "'test-plugin@claude-plugins-official' in ((agent_claude_code_plugins_state.content | b64decode | from_json) | map(attribute='id') | list)"
+        fail_msg: "agent_claude_code 场景验证失败"
+        success_msg: "✓ agent_claude_code 场景通过"

@@ -1,0 +1,2 @@
+{% set user_json_data = agent_claude_code_user_json_normalized %}
+{{ user_json_data | to_nice_yaml(indent=2, sort_keys=True) }}

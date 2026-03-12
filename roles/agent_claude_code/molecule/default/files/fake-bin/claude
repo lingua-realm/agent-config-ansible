@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import sys
+from pathlib import Path
+
+
+def load_json(path, default):
+    if path.exists():
+        return json.loads(path.read_text())
+    return default
+
+
+def save_json(path, value):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value))
+
+
+state_dir = Path(os.environ.get("FAKE_CLAUDE_STATE_DIR", "/tmp/fake-claude-state"))
+marketplaces_file = state_dir / "marketplaces.json"
+plugins_file = state_dir / "plugins.json"
+
+args = sys.argv[1:]
+
+if args == ["--version"]:
+    print("claude 1.0.0")
+    raise SystemExit(0)
+
+if args == ["plugin", "marketplace", "list", "--json"]:
+    print(json.dumps(load_json(marketplaces_file, [])))
+    raise SystemExit(0)
+
+if len(args) == 4 and args[:3] == ["plugin", "marketplace", "add"]:
+    url = args[3]
+    name = url.rstrip("/").rsplit("/", 1)[-1]
+    if name.endswith(".git"):
+        name = name[:-4]
+    marketplaces = load_json(marketplaces_file, [])
+    if not any(item["name"] == name for item in marketplaces):
+        marketplaces.append({"name": name, "url": url})
+        save_json(marketplaces_file, marketplaces)
+    print(f"added {name}")
+    raise SystemExit(0)
+
+if len(args) == 4 and args[:3] == ["plugin", "marketplace", "update"]:
+    print(f"updated {args[3]}")
+    raise SystemExit(0)
+
+if args == ["plugin", "list", "--json"]:
+    print(json.dumps(load_json(plugins_file, [])))
+    raise SystemExit(0)
+
+if len(args) == 3 and args[:2] == ["plugin", "install"]:
+    plugin_id = args[2]
+    plugins = load_json(plugins_file, [])
+    if not any(item["id"] == plugin_id for item in plugins):
+        plugins.append({"id": plugin_id})
+        save_json(plugins_file, plugins)
+    print(f"installed {plugin_id}")
+    raise SystemExit(0)
+
+print("unsupported command: " + " ".join(args), file=sys.stderr)
+raise SystemExit(1)

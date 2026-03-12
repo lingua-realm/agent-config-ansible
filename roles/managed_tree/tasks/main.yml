@@ -5,12 +5,55 @@
       - managed_tree_src | length > 0
       - managed_tree_dest | length > 0
       - managed_tree_src != managed_tree_dest
+      - managed_tree_transport in ['auto', 'rsync', 'archive']
       - managed_tree_rsync_timeout | int >= 0
       - managed_tree_rsync_opts is sequence
     fail_msg: >-
       managed_tree 角色参数无效：必须提供 managed_tree_src 和 managed_tree_dest，
-      且两者不能相同；managed_tree_rsync_timeout 不能小于 0；
-      managed_tree_rsync_opts 必须为列表。
+      且两者不能相同；managed_tree_transport 仅支持 auto/rsync/archive；
+      managed_tree_rsync_timeout 不能小于 0；managed_tree_rsync_opts 必须为列表。
+
+- name: 初始化 {{ managed_tree_display_name }} 辅助变量
+  set_fact:
+    managed_tree_src_trimmed: "{{ managed_tree_src | regex_replace('/+$', '') }}"
+    managed_tree_src_has_trailing_slash: "{{ managed_tree_src != (managed_tree_src | regex_replace('/+$', '')) }}"
+    managed_tree_src_basename: "{{ (managed_tree_src | regex_replace('/+$', '')) | basename }}"
+    managed_tree_connection_type: "{{ ansible_connection | default('smart') }}"
+    managed_tree_transport_resolved: >-
+      {{
+        'archive'
+        if (
+          managed_tree_transport == 'archive'
+          or (
+            managed_tree_transport == 'auto'
+            and (ansible_connection | default('smart')) in ['podman', 'docker', 'community.docker.docker']
+          )
+        )
+        else 'rsync'
+      }}
+    managed_tree_compare_target_path: >-
+      {{
+        managed_tree_dest
+        if managed_tree_src != (managed_tree_src | regex_replace('/+$', ''))
+        else (managed_tree_dest.rstrip('/') ~ '/' ~ ((managed_tree_src | regex_replace('/+$', '')) | basename))
+      }}
+    managed_tree_extracted_compare_path: >-
+      {{
+        managed_tree_remote_extract_path
+        if managed_tree_src != (managed_tree_src | regex_replace('/+$', ''))
+        else (managed_tree_remote_extract_path.rstrip('/') ~ '/' ~ ((managed_tree_src | regex_replace('/+$', '')) | basename))
+      }}
+    managed_tree_changed: false
+  changed_when: false
+
+- name: 校验 {{ managed_tree_display_name }} archive 传输约束
+  assert:
+    that:
+      - not (managed_tree_dirs | bool)
+      - managed_tree_rsync_opts | length == 0
+    fail_msg: >-
+      managed_tree 在 archive 传输模式下暂不支持 managed_tree_dirs=true 或额外 rsync 选项。
+  when: managed_tree_transport_resolved == 'archive'
 
 - name: 检查控制端 {{ managed_tree_display_name }} 源目录
   stat:
@@ -33,11 +76,33 @@
   delegate_to: localhost
   become: false
   changed_when: false
+  when: managed_tree_transport_resolved == 'rsync'
 
 - name: 检查目标端 rsync 是否可用（{{ managed_tree_display_name }}）
   command: rsync --version
   register: managed_tree_remote_rsync
   changed_when: false
+  when: managed_tree_transport_resolved == 'rsync'
+
+- name: 检查控制端 tar 是否可用（{{ managed_tree_display_name }}）
+  command: tar --version
+  register: managed_tree_controller_tar
+  delegate_to: localhost
+  become: false
+  changed_when: false
+  when: managed_tree_transport_resolved == 'archive'
+
+- name: 检查目标端 tar 是否可用（{{ managed_tree_display_name }}）
+  command: tar --version
+  register: managed_tree_remote_tar
+  changed_when: false
+  when: managed_tree_transport_resolved == 'archive'
+
+- name: 检查目标端 diff 是否可用（{{ managed_tree_display_name }}）
+  command: diff --version
+  register: managed_tree_remote_diff
+  changed_when: false
+  when: managed_tree_transport_resolved == 'archive'
 
 - name: 确保 {{ managed_tree_display_name }} 目标目录存在
   file:
@@ -45,7 +110,7 @@
     state: directory
     mode: "{{ managed_tree_directory_mode }}"
 
-- name: 同步 {{ managed_tree_display_name }} 到目标目录
+- name: 通过 rsync 同步 {{ managed_tree_display_name }} 到目标目录
   ansible.posix.synchronize:
     src: "{{ managed_tree_src }}"
     dest: "{{ managed_tree_dest }}"
@@ -59,13 +124,180 @@
     rsync_opts: "{{ managed_tree_rsync_opts }}"
   delegate_to: localhost
   register: managed_tree_sync
+  when: managed_tree_transport_resolved == 'rsync'
+
+- name: 通过 archive 方式同步 {{ managed_tree_display_name }} 到目标目录
+  block:
+    - name: 清理控制端旧的 {{ managed_tree_display_name }} 临时 tar 包
+      file:
+        path: "{{ managed_tree_local_archive_path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    - name: 生成 {{ managed_tree_display_name }} 控制端临时 tar 包（目录内容）
+      command:
+        argv:
+          - tar
+          - --sort=name
+          - --mtime=UTC 1970-01-01
+          - --owner=0
+          - --group=0
+          - --numeric-owner
+          - -cf
+          - "{{ managed_tree_local_archive_path }}"
+          - -C
+          - "{{ managed_tree_src_trimmed }}"
+          - .
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      when: managed_tree_src_has_trailing_slash | bool
+
+    - name: 生成 {{ managed_tree_display_name }} 控制端临时 tar 包（包含目录本身）
+      command:
+        argv:
+          - tar
+          - --sort=name
+          - --mtime=UTC 1970-01-01
+          - --owner=0
+          - --group=0
+          - --numeric-owner
+          - -cf
+          - "{{ managed_tree_local_archive_path }}"
+          - -C
+          - "{{ managed_tree_src_trimmed | dirname }}"
+          - "{{ managed_tree_src_basename }}"
+      delegate_to: localhost
+      become: false
+      changed_when: false
+      when: not (managed_tree_src_has_trailing_slash | bool)
+
+    - name: 检查现有 {{ managed_tree_display_name }} 比较目标
+      stat:
+        path: "{{ managed_tree_compare_target_path }}"
+      register: managed_tree_compare_target
+
+    - name: 清理 {{ managed_tree_display_name }} 目标端临时目录
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ managed_tree_remote_archive_path }}"
+        - "{{ managed_tree_remote_extract_path }}"
+      changed_when: false
+
+    - name: 准备 {{ managed_tree_display_name }} 目标端临时解包目录
+      file:
+        path: "{{ managed_tree_remote_extract_path }}"
+        state: directory
+        mode: "0700"
+      changed_when: false
+
+    - name: 上传 {{ managed_tree_display_name }} 临时 tar 包到目标端
+      copy:
+        src: "{{ managed_tree_local_archive_path }}"
+        dest: "{{ managed_tree_remote_archive_path }}"
+        mode: "0600"
+      changed_when: false
+
+    - name: 解包 {{ managed_tree_display_name }} 临时 tar 包到目标端临时目录
+      unarchive:
+        src: "{{ managed_tree_remote_archive_path }}"
+        dest: "{{ managed_tree_remote_extract_path }}"
+        remote_src: true
+      changed_when: false
+
+    - name: 比较 {{ managed_tree_display_name }} 目录树差异
+      command:
+        argv:
+          - diff
+          - -qr
+          - "{{ managed_tree_extracted_compare_path }}"
+          - "{{ managed_tree_compare_target_path }}"
+      register: managed_tree_archive_diff_cmd
+      changed_when: false
+      failed_when: managed_tree_archive_diff_cmd.rc > 1
+      when: managed_tree_compare_target.stat.exists
+
+    - name: 汇总 {{ managed_tree_display_name }} archive 比较结果
+      set_fact:
+        managed_tree_changed: >-
+          {{
+            (not managed_tree_compare_target.stat.exists)
+            or (
+              managed_tree_archive_diff_cmd is defined
+              and managed_tree_archive_diff_cmd.rc == 1
+            )
+          }}
+      changed_when: false
+
+    - name: 删除现有 {{ managed_tree_display_name }} 目标目录（archive 模式）
+      file:
+        path: "{{ managed_tree_dest }}"
+        state: absent
+      when:
+        - managed_tree_changed | bool
+        - managed_tree_delete | bool
+        - managed_tree_src_has_trailing_slash | bool
+
+    - name: 重新创建 {{ managed_tree_display_name }} 目标目录（archive 模式）
+      file:
+        path: "{{ managed_tree_dest }}"
+        state: directory
+        mode: "{{ managed_tree_directory_mode }}"
+      when:
+        - managed_tree_changed | bool
+        - managed_tree_delete | bool
+        - managed_tree_src_has_trailing_slash | bool
+
+    - name: 删除现有 {{ managed_tree_display_name }} 目标子目录（archive 模式）
+      file:
+        path: "{{ managed_tree_compare_target_path }}"
+        state: absent
+      when:
+        - managed_tree_changed | bool
+        - managed_tree_delete | bool
+        - not (managed_tree_src_has_trailing_slash | bool)
+
+    - name: 应用 {{ managed_tree_display_name }} archive 包到目标目录
+      unarchive:
+        src: "{{ managed_tree_remote_archive_path }}"
+        dest: "{{ managed_tree_dest }}"
+        remote_src: true
+      when: managed_tree_changed | bool
+  always:
+    - name: 清理 {{ managed_tree_display_name }} archive 临时文件
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ managed_tree_remote_archive_path }}"
+        - "{{ managed_tree_remote_extract_path }}"
+      changed_when: false
+
+    - name: 清理控制端 {{ managed_tree_display_name }} archive 临时文件
+      file:
+        path: "{{ managed_tree_local_archive_path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      changed_when: false
+  when: managed_tree_transport_resolved == 'archive'
 
 - name: 汇总 {{ managed_tree_display_name }} 结果
   set_fact:
     managed_tree_result:
-      changed: "{{ managed_tree_sync.changed | bool }}"
+      changed: >-
+        {{
+          (managed_tree_sync.changed | bool)
+          if managed_tree_transport_resolved == 'rsync'
+          else (managed_tree_changed | bool)
+        }}
       src: "{{ managed_tree_src }}"
       dest: "{{ managed_tree_dest }}"
+      transport: "{{ managed_tree_transport_resolved }}"
       archive: "{{ managed_tree_archive | bool }}"
       recursive: "{{ managed_tree_recursive | bool }}"
       delete: "{{ managed_tree_delete | bool }}"

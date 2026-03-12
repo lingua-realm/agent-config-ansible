@@ -1,0 +1,74 @@
+---
+# Claude 配置根目录
+agent_claude_code_home_dir: "{{ lookup('env', 'HOME') }}/.claude"
+
+# 用户级 claude.json 路径
+agent_claude_code_user_json_path: "{{ lookup('env', 'HOME') }}/.claude.json"
+
+# 角色工作临时目录
+agent_claude_code_temp_root: /tmp/agent-claude-code
+
+# 是否要求 Claude CLI 可用
+agent_claude_code_require_claude_cli: true
+
+# 当 statusLine 使用 ccline 时，是否要求 ccline 可用
+agent_claude_code_require_ccline: true
+
+# ccline 不可用时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+agent_claude_code_ccline_auto_install_npm: "@cometix/ccline"
+
+# 是否管理插件、用户 JSON、settings.json 以及执行最终验证
+agent_claude_code_manage_plugins: true
+agent_claude_code_manage_user_json: true
+agent_claude_code_manage_settings: true
+agent_claude_code_run_verify: true
+
+# 是否在 verify 阶段执行 settings.json Schema 校验
+agent_claude_code_verify_schema: false
+
+# 是否在变更 settings.json / ~/.claude.json 时交互确认
+agent_claude_code_confirm_settings_update: false
+agent_claude_code_confirm_user_json_update: false
+
+# 是否为 settings.json / ~/.claude.json / CLAUDE.md 创建备份
+agent_claude_code_backup: true
+
+# 插件 marketplace 映射；当插件 ID 以 @marketplace 结尾时会用到
+agent_claude_code_plugin_marketplaces:
+  claude-plugins-official: https://github.com/anthropics/claude-plugins-official.git
+
+# 显式要求安装的插件列表；为空时默认使用 settings.enabledPlugins
+agent_claude_code_plugins_to_install: []
+
+# Claude settings.json 的逻辑配置
+agent_claude_code_settings:
+  env: {}
+  model: ""
+  alwaysThinkingEnabled: false
+  outputStyle: ""
+  language: ""
+  permissions:
+    defaultMode: default
+    allow: []
+    deny: []
+  cleanupPeriodDays: 30
+  hooks: {}
+  enabledPlugins: []
+  statusLine:
+    type: command
+    command: ccline
+    padding: 0
+
+# 将被 deep merge 到 ~/.claude.json 的对象
+agent_claude_code_user_json:
+  hasCompletedOnboarding: true
+  mcpServers: {}
+
+# 可选外部资源路径；为空时不管理
+agent_claude_code_skills_src: ""
+agent_claude_code_output_styles_src: ""
+agent_claude_code_claude_md_src: ""
+
+# 同步 skills / output-styles 时是否删除目标端多余文件
+agent_claude_code_skills_delete: true
+agent_claude_code_output_styles_delete: true

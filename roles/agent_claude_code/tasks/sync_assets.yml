@@ -1,0 +1,59 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 5：同步可选资源
+      ========================================
+
+- name: 同步 output-styles 目录
+  include_role:
+    name: managed_tree
+  vars:
+    managed_tree_display_name: Claude output-styles
+    managed_tree_src: "{{ agent_claude_code_output_styles_src_normalized }}"
+    managed_tree_dest: "{{ agent_claude_code_home_dir }}/output-styles/"
+    managed_tree_delete: "{{ agent_claude_code_output_styles_delete }}"
+  when: agent_claude_code_output_styles_src_normalized | length > 0
+
+- name: 记录 output-styles 同步结果
+  set_fact:
+    agent_claude_code_output_styles_result: "{{ managed_tree_result }}"
+  changed_when: false
+  when: agent_claude_code_output_styles_src_normalized | length > 0
+
+- name: 同步 skills 目录
+  include_role:
+    name: managed_tree
+  vars:
+    managed_tree_display_name: Claude skills
+    managed_tree_src: "{{ agent_claude_code_skills_src_normalized }}"
+    managed_tree_dest: "{{ agent_claude_code_home_dir }}/skills/"
+    managed_tree_delete: "{{ agent_claude_code_skills_delete }}"
+  when: agent_claude_code_skills_src_normalized | length > 0
+
+- name: 记录 skills 同步结果
+  set_fact:
+    agent_claude_code_skills_result: "{{ managed_tree_result }}"
+  changed_when: false
+  when: agent_claude_code_skills_src_normalized | length > 0
+
+- name: 同步 CLAUDE.md
+  include_role:
+    name: managed_file
+  vars:
+    managed_file_display_name: CLAUDE.md
+    managed_file_dest: "{{ agent_claude_code_home_dir }}/CLAUDE.md"
+    managed_file_temp_path: "{{ agent_claude_code_temp_root }}/CLAUDE.md.rendered"
+    managed_file_copy_src: "{{ agent_claude_code_claude_md_src }}"
+    managed_file_mode: "0644"
+    managed_file_compare_kind: plain
+    managed_file_confirm: false
+    managed_file_backup: "{{ agent_claude_code_backup }}"
+  when: agent_claude_code_claude_md_src | length > 0
+
+- name: 记录 CLAUDE.md 同步结果
+  set_fact:
+    agent_claude_code_claude_md_result: "{{ managed_file_result }}"
+  changed_when: false
+  when: agent_claude_code_claude_md_src | length > 0

@@ -1,0 +1,231 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 6：验证 Claude Code 配置结果
+      ========================================
+
+- name: 检查 settings.json 是否存在
+  stat:
+    path: "{{ agent_claude_code_home_dir }}/settings.json"
+  register: agent_claude_code_settings_json_stat
+  when: agent_claude_code_manage_settings | bool
+
+- name: 验证 settings.json 存在
+  assert:
+    that:
+      - agent_claude_code_settings_json_stat.stat.exists
+    fail_msg: "settings.json 不存在"
+    success_msg: "✓ settings.json 已生成"
+  when: agent_claude_code_manage_settings | bool
+
+- name: 读取 settings.json
+  slurp:
+    src: "{{ agent_claude_code_home_dir }}/settings.json"
+  register: agent_claude_code_settings_json_raw
+  when: agent_claude_code_manage_settings | bool
+
+- name: 解析 settings.json
+  set_fact:
+    agent_claude_code_settings_data: "{{ agent_claude_code_settings_json_raw.content | b64decode | from_json }}"
+  changed_when: false
+  when: agent_claude_code_manage_settings | bool
+
+- name: 验证 settings.json 核心字段
+  assert:
+    that:
+      - agent_claude_code_settings_data.model == agent_claude_code_settings_normalized.model
+      - agent_claude_code_settings_data.outputStyle == agent_claude_code_settings_normalized.outputStyle
+      - agent_claude_code_settings_data.env == agent_claude_code_settings_normalized.env
+      - agent_claude_code_settings_data.permissions.allow == agent_claude_code_settings_normalized.permissions.allow
+      - agent_claude_code_settings_data.permissions.deny == agent_claude_code_settings_normalized.permissions.deny
+      - agent_claude_code_settings_data.cleanupPeriodDays == agent_claude_code_settings_normalized.cleanupPeriodDays
+    fail_msg: "settings.json 核心字段与期望配置不一致"
+    success_msg: "✓ settings.json 核心字段正确"
+  when: agent_claude_code_manage_settings | bool
+
+- name: 验证 settings.json 语言字段
+  assert:
+    that:
+      - agent_claude_code_settings_data.language == agent_claude_code_settings_normalized.language
+    fail_msg: "settings.json language 字段不匹配"
+    success_msg: "✓ settings.json language 字段正确"
+  when:
+    - agent_claude_code_manage_settings | bool
+    - agent_claude_code_settings_normalized.language | length > 0
+
+- name: 验证 settings.json 启用插件配置
+  assert:
+    that:
+      - agent_claude_code_settings_data.enabledPlugins is defined
+      - >-
+        ((agent_claude_code_settings_data.enabledPlugins | dict2items | map(attribute='key') | list | sort)
+        == (agent_claude_code_settings_normalized.enabledPlugins | sort))
+    fail_msg: "settings.json enabledPlugins 配置不匹配"
+    success_msg: "✓ settings.json enabledPlugins 配置正确"
+  when:
+    - agent_claude_code_manage_settings | bool
+    - agent_claude_code_settings_normalized.enabledPlugins | length > 0
+
+- name: 检查 ~/.claude.json 是否存在
+  stat:
+    path: "{{ agent_claude_code_user_json_path }}"
+  register: agent_claude_code_user_json_stat
+  when: agent_claude_code_manage_user_json | bool
+
+- name: 验证 ~/.claude.json 存在
+  assert:
+    that:
+      - agent_claude_code_user_json_stat.stat.exists
+    fail_msg: "~/.claude.json 不存在"
+    success_msg: "✓ ~/.claude.json 已生成"
+  when: agent_claude_code_manage_user_json | bool
+
+- name: 读取 ~/.claude.json
+  slurp:
+    src: "{{ agent_claude_code_user_json_path }}"
+  register: agent_claude_code_user_json_raw
+  when: agent_claude_code_manage_user_json | bool
+
+- name: 解析 ~/.claude.json
+  set_fact:
+    agent_claude_code_user_json_data: "{{ agent_claude_code_user_json_raw.content | b64decode | from_json }}"
+  changed_when: false
+  when: agent_claude_code_manage_user_json | bool
+
+- name: 验证 hasCompletedOnboarding
+  assert:
+    that:
+      - agent_claude_code_user_json_data.hasCompletedOnboarding == agent_claude_code_user_json_normalized.hasCompletedOnboarding
+    fail_msg: "~/.claude.json hasCompletedOnboarding 不匹配"
+    success_msg: "✓ ~/.claude.json onboarding 标记正确"
+  when: agent_claude_code_manage_user_json | bool
+
+- name: 验证 mcpServers 已正确合并
+  assert:
+    that:
+      - agent_claude_code_user_json_data.mcpServers[item.key] is defined
+      - agent_claude_code_user_json_data.mcpServers[item.key] == item.value
+    fail_msg: "~/.claude.json 中的 MCP Server {{ item.key }} 不匹配"
+    success_msg: "✓ MCP Server {{ item.key }} 配置正确"
+  loop: "{{ agent_claude_code_user_json_normalized.mcpServers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when:
+    - agent_claude_code_manage_user_json | bool
+    - agent_claude_code_user_json_normalized.mcpServers | length > 0
+
+- name: 检查 output-styles 目录
+  stat:
+    path: "{{ agent_claude_code_home_dir }}/output-styles"
+  register: agent_claude_code_output_styles_stat
+  when: agent_claude_code_output_styles_src | length > 0
+
+- name: 验证 output-styles 目录存在
+  assert:
+    that:
+      - agent_claude_code_output_styles_stat.stat.exists
+      - agent_claude_code_output_styles_stat.stat.isdir
+    fail_msg: "output-styles 目录未同步成功"
+    success_msg: "✓ output-styles 目录已同步"
+  when: agent_claude_code_output_styles_src | length > 0
+
+- name: 检查 skills 目录
+  stat:
+    path: "{{ agent_claude_code_home_dir }}/skills"
+  register: agent_claude_code_skills_stat
+  when: agent_claude_code_skills_src | length > 0
+
+- name: 验证 skills 目录存在
+  assert:
+    that:
+      - agent_claude_code_skills_stat.stat.exists
+      - agent_claude_code_skills_stat.stat.isdir
+    fail_msg: "skills 目录未同步成功"
+    success_msg: "✓ skills 目录已同步"
+  when: agent_claude_code_skills_src | length > 0
+
+- name: 检查 CLAUDE.md 是否存在
+  stat:
+    path: "{{ agent_claude_code_home_dir }}/CLAUDE.md"
+  register: agent_claude_code_claude_md_stat
+  when: agent_claude_code_claude_md_src | length > 0
+
+- name: 验证 CLAUDE.md 已同步
+  assert:
+    that:
+      - agent_claude_code_claude_md_stat.stat.exists
+      - agent_claude_code_claude_md_stat.stat.isreg
+    fail_msg: "CLAUDE.md 未同步成功"
+    success_msg: "✓ CLAUDE.md 已同步"
+  when: agent_claude_code_claude_md_src | length > 0
+
+- name: 获取已安装插件列表用于验证
+  command:
+    argv:
+      - claude
+      - plugin
+      - list
+      - --json
+  register: agent_claude_code_plugins_verify_raw
+  changed_when: false
+  when:
+    - agent_claude_code_manage_plugins | bool
+    - agent_claude_code_effective_plugins_to_install | length > 0
+
+- name: 解析验证阶段的插件列表
+  set_fact:
+    agent_claude_code_plugins_verify_ids: >-
+      {{
+        (
+          (
+            agent_claude_code_plugins_verify_raw.stdout
+            if (agent_claude_code_plugins_verify_raw.stdout | trim | length > 0)
+            else '[]'
+          ) | from_json
+        ) | map(attribute='id') | list
+      }}
+  changed_when: false
+  when:
+    - agent_claude_code_manage_plugins | bool
+    - agent_claude_code_effective_plugins_to_install | length > 0
+
+- name: 验证目标插件均已安装
+  assert:
+    that:
+      - item in agent_claude_code_plugins_verify_ids
+    fail_msg: "插件 {{ item }} 在验证阶段不可用"
+    success_msg: "✓ 插件 {{ item }} 已可用"
+  loop: "{{ agent_claude_code_effective_plugins_to_install }}"
+  loop_control:
+    label: "{{ item }}"
+  when:
+    - agent_claude_code_manage_plugins | bool
+    - agent_claude_code_effective_plugins_to_install | length > 0
+
+- name: 执行 settings.json Schema 校验
+  command:
+    argv:
+      - check-jsonschema
+      - --schemafile
+      - https://json.schemastore.org/claude-code-settings.json
+      - "{{ agent_claude_code_home_dir }}/settings.json"
+  register: agent_claude_code_schema_validation
+  changed_when: false
+  failed_when: false
+  when:
+    - agent_claude_code_manage_settings | bool
+    - agent_claude_code_verify_schema | bool
+
+- name: 显示 Schema 校验结果
+  debug:
+    msg: >-
+      {{
+        '✓ settings.json 通过 JSON Schema 校验'
+        if agent_claude_code_schema_validation.rc == 0
+        else '⚠ settings.json Schema 校验发现问题：\n' + (agent_claude_code_schema_validation.stderr | default(''))
+      }}
+  when:
+    - agent_claude_code_manage_settings | bool
+    - agent_claude_code_verify_schema | bool

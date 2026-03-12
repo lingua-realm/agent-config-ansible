@@ -1,0 +1,44 @@
+---
+- name: Claude Code 自动化配置入口
+  include_tasks: validate.yml
+
+- name: Claude Code 插件阶段
+  include_tasks: plugins.yml
+  when: agent_claude_code_manage_plugins | bool
+
+- name: Claude Code 用户 JSON 阶段
+  include_tasks: sync_user_json.yml
+  when: agent_claude_code_manage_user_json | bool
+
+- name: Claude Code settings.json 阶段
+  include_tasks: sync_settings.yml
+  when: agent_claude_code_manage_settings | bool
+
+- name: Claude Code 资源同步阶段
+  include_tasks: sync_assets.yml
+
+- name: Claude Code 验证阶段
+  include_tasks: verify.yml
+  when: agent_claude_code_run_verify | bool
+
+- name: 汇总 Claude Code 自动化配置结果
+  set_fact:
+    agent_claude_code_result:
+      changed: >-
+        {{
+          (agent_claude_code_plugins_result.changed | bool)
+          or (agent_claude_code_user_json_result.changed | bool)
+          or (agent_claude_code_settings_result.changed | bool)
+          or (agent_claude_code_skills_result.changed | bool)
+          or (agent_claude_code_output_styles_result.changed | bool)
+          or (agent_claude_code_claude_md_result.changed | bool)
+        }}
+      claude_cli: "{{ agent_claude_code_claude_cli_status }}"
+      ccline: "{{ agent_claude_code_ccline_status }}"
+      plugins: "{{ agent_claude_code_plugins_result }}"
+      user_json: "{{ agent_claude_code_user_json_result }}"
+      settings: "{{ agent_claude_code_settings_result }}"
+      skills: "{{ agent_claude_code_skills_result }}"
+      output_styles: "{{ agent_claude_code_output_styles_result }}"
+      claude_md: "{{ agent_claude_code_claude_md_result }}"
+  changed_when: false
