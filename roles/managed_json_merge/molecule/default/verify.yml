@@ -1,0 +1,43 @@
+---
+- name: Verify — JSON deep merge 幂等
+  hosts: all
+  vars:
+    managed_json_merge_test_root: /tmp/managed-json-merge/default
+    managed_json_merge_target: "{{ managed_json_merge_test_root }}/config.json"
+    managed_json_merge_backup_root: "{{ managed_json_merge_test_root }}/backups"
+    managed_json_merge_scope: write
+  tasks:
+    - name: 再次执行 managed_json_merge 角色
+      include_role:
+        name: managed_json_merge
+      vars:
+        managed_json_merge_display_name: 示例 JSON Deep Merge
+        managed_json_merge_dest: "{{ managed_json_merge_target }}"
+        managed_json_merge_template_src: "{{ playbook_dir }}/templates/patch.yml.j2"
+        managed_json_merge_temp_path: "{{ managed_json_merge_test_root }}/config.json.rendered"
+        managed_json_merge_backup: true
+        managed_json_merge_backup_dir: "{{ managed_json_merge_backup_root }}"
+        managed_json_merge_backup_prefix: config.json
+        managed_json_merge_confirm: false
+
+    - name: 读取最终 JSON 配置
+      slurp:
+        src: "{{ managed_json_merge_target }}"
+      register: managed_json_merge_target_raw
+
+    - name: 查找备份文件
+      find:
+        paths: "{{ managed_json_merge_backup_root }}"
+        file_type: file
+      register: managed_json_merge_backups
+
+    - name: 断言第二次执行保持幂等
+      assert:
+        that:
+          - not (managed_json_merge_result.changed | bool)
+          - managed_json_merge_backups.matched == 1
+          - managed_json_merge_result.backup_path == ''
+          - managed_json_merge_result.compare_kind == 'json_sorted'
+          - '(managed_json_merge_target_raw.content | b64decode | from_json) == {"agent": {"name": "modern", "settings": {"features": {"chat": true, "edit": true}, "scopes": ["write"]}}, "untouched": true}'
+        fail_msg: "managed_json_merge 幂等性验证失败"
+        success_msg: "✓ managed_json_merge 场景通过"

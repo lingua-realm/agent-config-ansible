@@ -1,0 +1,331 @@
+---
+- name: 校验 {{ managed_file_display_name }} 角色输入
+  assert:
+    that:
+      - managed_file_dest | length > 0
+      - managed_file_temp_path | length > 0
+      - managed_file_temp_path != managed_file_dest
+      - managed_file_compare_kind in ['plain', 'json_sorted']
+      - >-
+        ([
+          managed_file_template_src is defined,
+          managed_file_copy_src is defined,
+          managed_file_content is defined
+        ]
+        | select('equalto', true)
+        | list
+        | length) == 1
+      - managed_file_template_src is not defined or managed_file_template_src | length > 0
+      - managed_file_copy_src is not defined or managed_file_copy_src | length > 0
+      - not (managed_file_backup | bool) or managed_file_backup_dir | length > 0
+      - not (managed_file_backup | bool) or managed_file_backup_prefix | length > 0
+    fail_msg: >-
+      managed_file 角色参数无效：必须提供 managed_file_dest，且只能二选一提供
+      managed_file_template_src、managed_file_copy_src 或 managed_file_content 中的一个；
+      managed_file_temp_path 不能与 managed_file_dest 相同；
+      managed_file_compare_kind 仅支持 plain/json_sorted。
+
+- name: 检测控制端是否为交互式终端（{{ managed_file_display_name }}）
+  set_fact:
+    managed_file_interactive_terminal: >-
+      {{
+        lookup(
+          'ansible.builtin.pipe',
+          'if [ -t 0 ] && [ -t 1 ]; then echo true; else echo false; fi'
+        ) | trim == 'true'
+      }}
+  changed_when: false
+
+- name: 初始化 {{ managed_file_display_name }} 辅助变量
+  set_fact:
+    managed_file_existing_sorted_path: "{{ managed_file_temp_path }}.existing.sorted"
+    managed_file_new_sorted_path: "{{ managed_file_temp_path }}.new.sorted"
+    managed_file_backup_path: ""
+  changed_when: false
+
+- name: 确保 {{ managed_file_display_name }} 目标目录存在
+  file:
+    path: "{{ managed_file_dest | dirname }}"
+    state: directory
+    mode: "0755"
+
+- name: 检查现有 {{ managed_file_display_name }} 是否存在
+  stat:
+    path: "{{ managed_file_dest }}"
+  register: managed_file_existing
+
+- name: 准备、比较并更新 {{ managed_file_display_name }}
+  block:
+    - name: 渲染 {{ managed_file_display_name }} 模板到临时文件
+      template:
+        src: "{{ managed_file_template_src }}"
+        dest: "{{ managed_file_temp_path }}"
+        mode: "{{ managed_file_mode }}"
+      when: managed_file_template_src is defined
+      changed_when: false
+
+    - name: 复制 {{ managed_file_display_name }} 源文件到临时文件
+      copy:
+        src: "{{ managed_file_copy_src }}"
+        dest: "{{ managed_file_temp_path }}"
+        mode: "{{ managed_file_mode }}"
+      when: managed_file_copy_src is defined
+      changed_when: false
+
+    - name: 写入 {{ managed_file_display_name }} 内容到临时文件
+      copy:
+        content: "{{ managed_file_content }}"
+        dest: "{{ managed_file_temp_path }}"
+        mode: "{{ managed_file_mode }}"
+      when: managed_file_content is defined
+      changed_when: false
+
+    - name: 读取现有 {{ managed_file_display_name }} JSON 内容
+      slurp:
+        src: "{{ managed_file_dest }}"
+      register: managed_file_existing_json_raw
+      when:
+        - managed_file_compare_kind == 'json_sorted'
+        - managed_file_existing.stat.exists
+
+    - name: 读取新的 {{ managed_file_display_name }} JSON 内容
+      slurp:
+        src: "{{ managed_file_temp_path }}"
+      register: managed_file_new_json_raw
+      when: managed_file_compare_kind == 'json_sorted'
+
+    - name: 标准化现有 {{ managed_file_display_name }} JSON
+      copy:
+        content: "{{ (managed_file_existing_json_raw.content | b64decode | from_json | to_nice_json(sort_keys=True)) ~ '\n' }}"
+        dest: "{{ managed_file_existing_sorted_path }}"
+        mode: "{{ managed_file_mode }}"
+      when:
+        - managed_file_compare_kind == 'json_sorted'
+        - managed_file_existing.stat.exists
+      changed_when: false
+
+    - name: 标准化新的 {{ managed_file_display_name }} JSON
+      copy:
+        content: "{{ (managed_file_new_json_raw.content | b64decode | from_json | to_nice_json(sort_keys=True)) ~ '\n' }}"
+        dest: "{{ managed_file_new_sorted_path }}"
+        mode: "{{ managed_file_mode }}"
+      when: managed_file_compare_kind == 'json_sorted'
+      changed_when: false
+
+    - name: 标记 {{ managed_file_display_name }} 为新文件（JSON 排序比较）
+      set_fact:
+        managed_file_diff_json:
+          stdout: "NEW_FILE"
+          rc: 1
+      when:
+        - managed_file_compare_kind == 'json_sorted'
+        - not managed_file_existing.stat.exists
+      changed_when: false
+
+    - name: 检查 {{ managed_file_display_name }} 是否有差异（JSON 排序比较）
+      command:
+        argv:
+          - diff
+          - -u
+          - "{{ managed_file_existing_sorted_path }}"
+          - "{{ managed_file_new_sorted_path }}"
+      register: managed_file_diff_json_cmd
+      when:
+        - managed_file_compare_kind == 'json_sorted'
+        - managed_file_existing.stat.exists
+      changed_when: false
+      failed_when: managed_file_diff_json_cmd.rc > 1
+
+    - name: 汇总 {{ managed_file_display_name }} JSON 排序比较结果
+      set_fact:
+        managed_file_diff_json: "{{ managed_file_diff_json_cmd }}"
+      when:
+        - managed_file_compare_kind == 'json_sorted'
+        - managed_file_existing.stat.exists
+      changed_when: false
+
+    - name: 标记 {{ managed_file_display_name }} 为新文件（普通比较）
+      set_fact:
+        managed_file_diff_plain:
+          stdout: "NEW_FILE"
+          rc: 1
+      when:
+        - managed_file_compare_kind == 'plain'
+        - not managed_file_existing.stat.exists
+      changed_when: false
+
+    - name: 检查 {{ managed_file_display_name }} 是否有差异（普通比较）
+      command:
+        argv:
+          - diff
+          - -u
+          - "{{ managed_file_dest }}"
+          - "{{ managed_file_temp_path }}"
+      register: managed_file_diff_plain_cmd
+      when:
+        - managed_file_compare_kind == 'plain'
+        - managed_file_existing.stat.exists
+      changed_when: false
+      failed_when: managed_file_diff_plain_cmd.rc > 1
+
+    - name: 汇总 {{ managed_file_display_name }} 普通比较结果
+      set_fact:
+        managed_file_diff_plain: "{{ managed_file_diff_plain_cmd }}"
+      when:
+        - managed_file_compare_kind == 'plain'
+        - managed_file_existing.stat.exists
+      changed_when: false
+
+    - name: 汇总 {{ managed_file_display_name }} 差异结果
+      set_fact:
+        managed_file_diff: >-
+          {{
+            managed_file_diff_json
+            if managed_file_compare_kind == 'json_sorted'
+            else managed_file_diff_plain
+          }}
+        managed_file_changed: >-
+          {{
+            (
+              managed_file_diff_json.stdout
+              if managed_file_compare_kind == 'json_sorted'
+              else managed_file_diff_plain.stdout
+            ) != ''
+          }}
+        managed_file_is_new: >-
+          {{
+            (
+              managed_file_diff_json.stdout
+              if managed_file_compare_kind == 'json_sorted'
+              else managed_file_diff_plain.stdout
+            ) == 'NEW_FILE'
+          }}
+      changed_when: false
+
+    - name: 显示 {{ managed_file_display_name }} 差异
+      debug:
+        msg: |
+          ========================================
+          {{ managed_file_display_name }} 差异预览
+          ========================================
+          {% if managed_file_is_new %}
+          这是首次创建 {{ managed_file_display_name }} 文件
+          {% elif not (managed_file_changed | bool) %}
+          ✓ 配置无变化，无需更新
+          {% else %}
+          {{ managed_file_diff.stdout }}
+          {% endif %}
+
+    - name: 确保 {{ managed_file_display_name }} 备份目录存在
+      file:
+        path: "{{ managed_file_backup_dir }}"
+        state: directory
+        mode: "0755"
+      when:
+        - managed_file_backup | bool
+        - managed_file_existing.stat.exists
+        - managed_file_changed | bool
+        - not (managed_file_is_new | bool)
+
+    - name: 生成 {{ managed_file_display_name }} 备份路径
+      set_fact:
+        managed_file_backup_path: >-
+          {{ managed_file_backup_dir }}/{{ managed_file_backup_prefix }}.{{ now(fmt='%Y%m%d_%H%M%S') }}
+      when:
+        - managed_file_backup | bool
+        - managed_file_existing.stat.exists
+        - managed_file_changed | bool
+        - not (managed_file_is_new | bool)
+      changed_when: false
+
+    - name: 备份现有 {{ managed_file_display_name }}
+      copy:
+        src: "{{ managed_file_dest }}"
+        dest: "{{ managed_file_backup_path }}"
+        remote_src: true
+        mode: "{{ managed_file_mode }}"
+      when:
+        - managed_file_backup | bool
+        - managed_file_existing.stat.exists
+        - managed_file_changed | bool
+        - not (managed_file_is_new | bool)
+
+    - name: 显示 {{ managed_file_display_name }} 备份信息
+      debug:
+        msg: "备份已创建：{{ managed_file_backup_path }}"
+      when:
+        - managed_file_backup | bool
+        - managed_file_existing.stat.exists
+        - managed_file_changed | bool
+        - not (managed_file_is_new | bool)
+
+    - name: 非交互环境下跳过 {{ managed_file_display_name }} 更新确认
+      debug:
+        msg: "检测到非交互终端，跳过 {{ managed_file_display_name }} 更新确认提示"
+      when:
+        - managed_file_changed | bool
+        - managed_file_confirm | bool
+        - not (managed_file_skip_confirm | bool)
+        - not (managed_file_interactive_terminal | bool)
+
+    - name: 询问是否继续更新 {{ managed_file_display_name }}
+      pause:
+        prompt: |
+          ========================================
+          检测到 {{ managed_file_display_name }} 配置变更
+          ========================================
+          {% if managed_file_is_new %}
+          将创建新的 {{ managed_file_display_name }} 文件
+          {% else %}
+          上述差异将被应用
+          {% endif %}
+
+          备份文件：{% if managed_file_backup_path %}{{ managed_file_backup_path }}{% else %}（无需备份）{% endif %}
+
+          是否继续？(yes/no)
+      when:
+        - managed_file_changed | bool
+        - managed_file_confirm | bool
+        - not (managed_file_skip_confirm | bool)
+        - managed_file_interactive_terminal | bool
+      register: managed_file_user_confirmation
+
+    - name: 确认用户选择（{{ managed_file_display_name }}）
+      fail:
+        msg: "用户取消了 {{ managed_file_display_name }} 更新"
+      when:
+        - managed_file_changed | bool
+        - managed_file_confirm | bool
+        - not (managed_file_skip_confirm | bool)
+        - managed_file_interactive_terminal | bool
+        - managed_file_user_confirmation.user_input | default('') | lower not in ['yes', 'y']
+
+    - name: 更新 {{ managed_file_display_name }}
+      copy:
+        src: "{{ managed_file_temp_path }}"
+        dest: "{{ managed_file_dest }}"
+        remote_src: true
+        mode: "{{ managed_file_mode }}"
+      when: managed_file_changed | bool
+
+    - name: 汇总 {{ managed_file_display_name }} 结果
+      set_fact:
+        managed_file_result:
+          changed: "{{ managed_file_changed | bool }}"
+          created: "{{ managed_file_changed | bool and managed_file_is_new | bool }}"
+          backup_path: "{{ managed_file_backup_path }}"
+          compare_kind: "{{ managed_file_compare_kind }}"
+          diff: "{{ managed_file_diff.stdout }}"
+      changed_when: false
+
+  always:
+    - name: 清理 {{ managed_file_display_name }} 临时文件
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ managed_file_temp_path }}"
+        - "{{ managed_file_existing_sorted_path }}"
+        - "{{ managed_file_new_sorted_path }}"
+      when: managed_file_cleanup_temp | bool
+      changed_when: false

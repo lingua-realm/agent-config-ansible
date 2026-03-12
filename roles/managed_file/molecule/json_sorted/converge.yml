@@ -1,0 +1,65 @@
+---
+- name: Converge — JSON 排序比较
+  hosts: all
+  vars:
+    managed_file_test_root: /tmp/managed-file/json-sorted
+    managed_file_target: "{{ managed_file_test_root }}/config.json"
+    managed_file_backup_root: "{{ managed_file_test_root }}/backups"
+  tasks:
+    - name: 准备测试目录
+      file:
+        path: "{{ managed_file_test_root }}"
+        state: directory
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 写入现有 JSON 配置
+      copy:
+        dest: "{{ managed_file_target }}"
+        content: |
+          {
+            "b": 1,
+            "a": 2
+          }
+        mode: "0644"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行等价 JSON 比较
+      include_role:
+        name: managed_file
+      vars:
+        managed_file_display_name: JSON 配置
+        managed_file_dest: "{{ managed_file_target }}"
+        managed_file_temp_path: "{{ managed_file_test_root }}/config.json.rendered"
+        managed_file_copy_src: "{{ playbook_dir }}/files/same.json"
+        managed_file_compare_kind: json_sorted
+        managed_file_backup: true
+        managed_file_backup_dir: "{{ managed_file_backup_root }}"
+        managed_file_backup_prefix: config.json
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 断言等价 JSON 不触发更新
+      assert:
+        that:
+          - not (managed_file_result.changed | bool)
+          - managed_file_result.compare_kind == 'json_sorted'
+        fail_msg: "等价 JSON 场景不符合预期"
+        success_msg: "✓ 等价 JSON 场景通过"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行有差异的 JSON 更新
+      include_role:
+        name: managed_file
+      vars:
+        managed_file_display_name: JSON 配置
+        managed_file_dest: "{{ managed_file_target }}"
+        managed_file_temp_path: "{{ managed_file_test_root }}/config.json.rendered"
+        managed_file_copy_src: "{{ playbook_dir }}/files/updated.json"
+        managed_file_compare_kind: json_sorted
+        managed_file_backup: true
+        managed_file_backup_dir: "{{ managed_file_backup_root }}"
+        managed_file_backup_prefix: config.json

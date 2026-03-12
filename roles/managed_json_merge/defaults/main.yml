@@ -1,0 +1,39 @@
+---
+# (可选) 可读名称，用于日志输出
+managed_json_merge_display_name: managed json merge
+
+# (必填) 目标 JSON 文件路径
+managed_json_merge_dest: ""
+
+# (必填) patch 模板路径；模板需渲染为 YAML/JSON 对象
+managed_json_merge_template_src: ""
+
+# (可选) 最终文件权限
+managed_json_merge_mode: "0644"
+
+# (可选) 交给 managed_file 使用的远端临时文件路径
+managed_json_merge_temp_path: >-
+  /tmp/managed-json-merge-{{ managed_json_merge_display_name | regex_replace('[^A-Za-z0-9_.-]+', '_') }}.json
+
+# (可选) 是否在覆盖前创建备份
+managed_json_merge_backup: true
+
+# (可选) 备份目录
+managed_json_merge_backup_dir: "{{ managed_json_merge_dest | dirname }}/.managed_json_merge_backups"
+
+# (可选) 备份文件名前缀
+managed_json_merge_backup_prefix: >-
+  {{
+    (managed_json_merge_dest | basename)
+    if (managed_json_merge_dest | length > 0)
+    else (managed_json_merge_display_name | regex_replace('[^A-Za-z0-9_.-]+', '_'))
+  }}
+
+# (可选) 检测到变更时是否交互确认
+managed_json_merge_confirm: false
+
+# (可选) 强制跳过交互确认
+managed_json_merge_skip_confirm: false
+
+# (可选) 任务结束后是否删除 managed_file 使用的远端临时文件
+managed_json_merge_cleanup_temp: true

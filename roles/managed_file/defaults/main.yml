@@ -1,0 +1,48 @@
+---
+# (可选) 可读名称，用于日志输出
+managed_file_display_name: managed file
+
+# (必填) 目标文件路径
+managed_file_dest: ""
+
+# (必填/有默认值) 渲染或复制后的远端临时文件路径
+managed_file_temp_path: >-
+  /tmp/managed-file-{{ managed_file_display_name | regex_replace('[^A-Za-z0-9_.-]+', '_') }}
+
+# (可选) 最终文件权限
+managed_file_mode: "0644"
+
+# (可选) 比较策略：plain 或 json_sorted
+managed_file_compare_kind: plain
+
+# (可选) 是否在覆盖前创建备份
+managed_file_backup: true
+
+# (可选) 备份目录
+managed_file_backup_dir: "{{ managed_file_dest | dirname }}/.managed_file_backups"
+
+# (可选) 备份文件名前缀
+managed_file_backup_prefix: >-
+  {{
+    (managed_file_dest | basename)
+    if (managed_file_dest | length > 0)
+    else (managed_file_display_name | regex_replace('[^A-Za-z0-9_.-]+', '_'))
+  }}
+
+# (可选) 检测到变更时是否交互确认
+managed_file_confirm: false
+
+# (可选) 强制跳过交互确认
+managed_file_skip_confirm: false
+
+# (可选) 任务结束后是否清理远端临时文件
+managed_file_cleanup_temp: true
+
+# (可选) 二选一：模板源文件路径
+# managed_file_template_src: ""
+
+# (可选) 二选一：原样复制的源文件路径
+# managed_file_copy_src: ""
+
+# (可选) 二选一：直接写入的文件内容
+# managed_file_content: ""

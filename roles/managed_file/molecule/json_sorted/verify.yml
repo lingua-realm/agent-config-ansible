@@ -1,0 +1,42 @@
+---
+- name: Verify — JSON 排序比较幂等
+  hosts: all
+  vars:
+    managed_file_test_root: /tmp/managed-file/json-sorted
+    managed_file_target: "{{ managed_file_test_root }}/config.json"
+    managed_file_backup_root: "{{ managed_file_test_root }}/backups"
+  tasks:
+    - name: 再次执行有差异 JSON 的目标态
+      include_role:
+        name: managed_file
+      vars:
+        managed_file_display_name: JSON 配置
+        managed_file_dest: "{{ managed_file_target }}"
+        managed_file_temp_path: "{{ managed_file_test_root }}/config.json.rendered"
+        managed_file_copy_src: "{{ playbook_dir }}/files/updated.json"
+        managed_file_compare_kind: json_sorted
+        managed_file_backup: true
+        managed_file_backup_dir: "{{ managed_file_backup_root }}"
+        managed_file_backup_prefix: config.json
+
+    - name: 读取最终 JSON 配置
+      slurp:
+        src: "{{ managed_file_target }}"
+      register: managed_file_json_target
+
+    - name: 查找 JSON 备份文件
+      find:
+        paths: "{{ managed_file_backup_root }}"
+        file_type: file
+      register: managed_file_json_backups
+
+    - name: 断言 JSON 场景第二次执行保持幂等
+      assert:
+        that:
+          - not (managed_file_result.changed | bool)
+          - managed_file_json_backups.matched == 1
+          - managed_file_result.backup_path == ""
+          - managed_file_result.compare_kind == 'json_sorted'
+          - '(managed_file_json_target.content | b64decode | from_json) == {"a": 2, "b": 1, "c": 3}'
+        fail_msg: "JSON 场景幂等性验证失败"
+        success_msg: "✓ JSON 场景幂等性验证通过"

@@ -1,0 +1,42 @@
+---
+- name: Verify — 普通文件场景幂等
+  hosts: all
+  vars:
+    managed_file_test_root: /tmp/managed-file/default
+    managed_file_target: "{{ managed_file_test_root }}/app.conf"
+    managed_file_backup_root: "{{ managed_file_test_root }}/backups"
+    managed_file_app_mode: modern
+  tasks:
+    - name: 再次执行 managed_file 角色
+      include_role:
+        name: managed_file
+      vars:
+        managed_file_display_name: 示例文本配置
+        managed_file_dest: "{{ managed_file_target }}"
+        managed_file_temp_path: "{{ managed_file_test_root }}/app.conf.rendered"
+        managed_file_template_src: "{{ playbook_dir }}/templates/app.conf.j2"
+        managed_file_backup: true
+        managed_file_backup_dir: "{{ managed_file_backup_root }}"
+        managed_file_backup_prefix: app.conf
+        managed_file_confirm: false
+
+    - name: 读取最终配置
+      slurp:
+        src: "{{ managed_file_target }}"
+      register: managed_file_default_target
+
+    - name: 查找备份文件
+      find:
+        paths: "{{ managed_file_backup_root }}"
+        file_type: file
+      register: managed_file_default_backups
+
+    - name: 断言第二次执行保持幂等
+      assert:
+        that:
+          - not (managed_file_result.changed | bool)
+          - managed_file_default_backups.matched == 1
+          - managed_file_result.backup_path == ""
+          - (managed_file_default_target.content | b64decode | trim) == "mode=modern\nenabled=true"
+        fail_msg: "普通文件场景幂等性验证失败"
+        success_msg: "✓ 普通文件幂等性验证通过"

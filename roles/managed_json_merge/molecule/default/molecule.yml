@@ -1,0 +1,16 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: podman
+platforms:
+  - name: instance-managed-json-merge-default
+    image: "python:3.13-bookworm"
+    pre_build_image: true
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+verifier:
+  name: ansible

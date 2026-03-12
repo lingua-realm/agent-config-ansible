@@ -1,0 +1,49 @@
+---
+- name: Converge — JSON deep merge
+  hosts: all
+  vars:
+    managed_json_merge_test_root: /tmp/managed-json-merge/default
+    managed_json_merge_target: "{{ managed_json_merge_test_root }}/config.json"
+    managed_json_merge_backup_root: "{{ managed_json_merge_test_root }}/backups"
+    managed_json_merge_scope: write
+  tasks:
+    - name: 准备测试目录
+      file:
+        path: "{{ managed_json_merge_test_root }}"
+        state: directory
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 写入现有 JSON 配置
+      copy:
+        dest: "{{ managed_json_merge_target }}"
+        content: |
+          {
+            "agent": {
+              "name": "legacy",
+              "settings": {
+                "features": {
+                  "chat": false
+                },
+                "scopes": ["read"]
+              }
+            },
+            "untouched": true
+          }
+        mode: "0644"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行 managed_json_merge 角色
+      include_role:
+        name: managed_json_merge
+      vars:
+        managed_json_merge_display_name: 示例 JSON Deep Merge
+        managed_json_merge_dest: "{{ managed_json_merge_target }}"
+        managed_json_merge_template_src: "{{ playbook_dir }}/templates/patch.yml.j2"
+        managed_json_merge_temp_path: "{{ managed_json_merge_test_root }}/config.json.rendered"
+        managed_json_merge_backup: true
+        managed_json_merge_backup_dir: "{{ managed_json_merge_backup_root }}"
+        managed_json_merge_backup_prefix: config.json
+        managed_json_merge_confirm: false

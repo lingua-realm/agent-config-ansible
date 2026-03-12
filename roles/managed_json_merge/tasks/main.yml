@@ -1,0 +1,81 @@
+---
+- name: 校验 {{ managed_json_merge_display_name }} 角色输入
+  assert:
+    that:
+      - managed_json_merge_dest | length > 0
+      - managed_json_merge_template_src | length > 0
+    fail_msg: >-
+      managed_json_merge 角色参数无效：必须提供 managed_json_merge_dest 和
+      managed_json_merge_template_src。
+
+- name: 检查现有 {{ managed_json_merge_display_name }} 是否存在
+  stat:
+    path: "{{ managed_json_merge_dest }}"
+  register: managed_json_merge_existing
+
+- name: 读取现有 {{ managed_json_merge_display_name }} JSON 内容
+  slurp:
+    src: "{{ managed_json_merge_dest }}"
+  register: managed_json_merge_existing_raw
+  when: managed_json_merge_existing.stat.exists
+
+- name: 初始化现有 {{ managed_json_merge_display_name }} JSON 数据
+  set_fact:
+    managed_json_merge_existing_data: >-
+      {{
+        (managed_json_merge_existing_raw.content | b64decode | from_json)
+        if managed_json_merge_existing.stat.exists
+        else {}
+      }}
+  changed_when: false
+
+- name: 渲染并解析 {{ managed_json_merge_display_name }} patch 模板
+  set_fact:
+    managed_json_merge_patch_data: >-
+      {{ lookup('ansible.builtin.template', managed_json_merge_template_src) | from_yaml }}
+  changed_when: false
+
+- name: 校验 {{ managed_json_merge_display_name }} 数据结构
+  assert:
+    that:
+      - managed_json_merge_existing_data is mapping
+      - managed_json_merge_patch_data is mapping
+    fail_msg: >-
+      managed_json_merge 仅支持 JSON 对象的 deep merge；现有文件和 patch 模板都必须解析为对象。
+
+- name: 计算 {{ managed_json_merge_display_name }} deep merge 结果
+  set_fact:
+    managed_json_merge_merged_data: >-
+      {{
+        managed_json_merge_existing_data
+        | combine(managed_json_merge_patch_data, recursive=True, list_merge='replace')
+      }}
+  changed_when: false
+
+- name: 通过 managed_file 管理 {{ managed_json_merge_display_name }}
+  include_role:
+    name: managed_file
+  vars:
+    managed_file_display_name: "{{ managed_json_merge_display_name }}"
+    managed_file_dest: "{{ managed_json_merge_dest }}"
+    managed_file_temp_path: "{{ managed_json_merge_temp_path }}"
+    managed_file_content: "{{ (managed_json_merge_merged_data | to_nice_json(sort_keys=True)) ~ '\n' }}"
+    managed_file_mode: "{{ managed_json_merge_mode }}"
+    managed_file_compare_kind: json_sorted
+    managed_file_backup: "{{ managed_json_merge_backup }}"
+    managed_file_backup_dir: "{{ managed_json_merge_backup_dir }}"
+    managed_file_backup_prefix: "{{ managed_json_merge_backup_prefix }}"
+    managed_file_confirm: "{{ managed_json_merge_confirm }}"
+    managed_file_skip_confirm: "{{ managed_json_merge_skip_confirm }}"
+    managed_file_cleanup_temp: "{{ managed_json_merge_cleanup_temp }}"
+
+- name: 汇总 {{ managed_json_merge_display_name }} 结果
+  set_fact:
+    managed_json_merge_result:
+      changed: "{{ managed_file_result.changed | bool }}"
+      created: "{{ managed_file_result.created | bool }}"
+      backup_path: "{{ managed_file_result.backup_path }}"
+      compare_kind: "{{ managed_file_result.compare_kind }}"
+      diff: "{{ managed_file_result.diff }}"
+      merged: "{{ managed_json_merge_merged_data }}"
+  changed_when: false

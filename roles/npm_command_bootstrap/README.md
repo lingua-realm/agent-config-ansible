@@ -7,7 +7,7 @@
 ## 变量
 
 | 变量 | 必填 | 默认值 | 说明 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `npm_command_bootstrap_key` | ✅ | `""` | 结果字典中的唯一键 |
 | `npm_command_bootstrap_display_name` | ✅ | `""` | 可读名称，用于日志输出 |
 | `npm_command_bootstrap_command` | ✅ | `""` | 在 PATH 中检查的可执行文件名 |
@@ -65,4 +65,3 @@ npm_command_bootstrap_results:
       command: claude --help
       when: npm_command_bootstrap_results.claude.available
 ```
-

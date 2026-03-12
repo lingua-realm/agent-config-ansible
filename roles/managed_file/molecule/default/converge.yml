@@ -1,0 +1,39 @@
+---
+- name: Converge — 普通文件覆盖并创建备份
+  hosts: all
+  vars:
+    managed_file_test_root: /tmp/managed-file/default
+    managed_file_target: "{{ managed_file_test_root }}/app.conf"
+    managed_file_backup_root: "{{ managed_file_test_root }}/backups"
+    managed_file_app_mode: modern
+  tasks:
+    - name: 准备测试目录
+      file:
+        path: "{{ managed_file_test_root }}"
+        state: directory
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 写入旧版本配置
+      copy:
+        dest: "{{ managed_file_target }}"
+        content: |
+          mode=legacy
+          enabled=false
+        mode: "0644"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行 managed_file 角色
+      include_role:
+        name: managed_file
+      vars:
+        managed_file_display_name: 示例文本配置
+        managed_file_dest: "{{ managed_file_target }}"
+        managed_file_temp_path: "{{ managed_file_test_root }}/app.conf.rendered"
+        managed_file_template_src: "{{ playbook_dir }}/templates/app.conf.j2"
+        managed_file_backup: true
+        managed_file_backup_dir: "{{ managed_file_backup_root }}"
+        managed_file_backup_prefix: app.conf
+        managed_file_confirm: false

@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: managed_file
+  author: lingua-realm
+  description: 以安全、可预览的方式管理目标文件，支持备份、交互确认与可选 JSON 归一化比较
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: macOS
+      versions:
+        - all
+
+dependencies: []
