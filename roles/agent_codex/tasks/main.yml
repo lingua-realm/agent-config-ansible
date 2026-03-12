@@ -1,0 +1,34 @@
+---
+- name: Codex 自动化配置入口
+  include_tasks: validate.yml
+
+- name: Codex config.toml 阶段
+  include_tasks: sync_config.yml
+  when: agent_codex_manage_config | bool
+
+- name: Codex .env 阶段
+  include_tasks: sync_env.yml
+  when: agent_codex_should_manage_env | bool
+
+- name: Codex 资源同步阶段
+  include_tasks: sync_assets.yml
+  when: agent_codex_should_manage_agents_md | bool
+
+- name: Codex 验证阶段
+  include_tasks: verify.yml
+  when: agent_codex_run_verify | bool
+
+- name: 汇总 Codex 自动化配置结果
+  set_fact:
+    agent_codex_result:
+      changed: >-
+        {{
+          (agent_codex_config_result.changed | bool)
+          or (agent_codex_env_result.changed | bool)
+          or (agent_codex_agents_md_result.changed | bool)
+        }}
+      codex_cli: "{{ agent_codex_codex_cli_status }}"
+      config: "{{ agent_codex_config_result }}"
+      env: "{{ agent_codex_env_result }}"
+      agents_md: "{{ agent_codex_agents_md_result }}"
+  changed_when: false

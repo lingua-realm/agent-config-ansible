@@ -13,7 +13,6 @@
 #
 # 默认资源目录：
 #   inventory/<profile>/claude_assets/
-#     - skills/
 #     - output-styles/
 #     - CLAUDE.md
 #
@@ -24,7 +23,6 @@
 #     - claude-md/
 #
 # 可选覆盖外部资源：
-#   -e "claude_code_skills_src=/path/to/skills"
 #   -e "claude_code_output_styles_src=/path/to/output-styles"
 #   -e "claude_code_claude_md_src=/path/to/CLAUDE.md"
 
@@ -70,13 +68,6 @@
       tags:
         - always
 
-    - name: 检查默认 skills 目录
-      stat:
-        path: "{{ claude_code_assets_dir_effective }}/skills"
-      register: claude_code_default_skills_dir
-      tags:
-        - always
-
     - name: 检查默认 output-styles 目录
       stat:
         path: "{{ claude_code_assets_dir_effective }}/output-styles"
@@ -111,16 +102,6 @@
 
     - name: 归一化 agent_claude_code 输入变量
       set_fact:
-        claude_code_skills_src_effective: >-
-          {{
-            claude_code_skills_src
-            if (claude_code_skills_src is defined)
-            else (
-              (claude_code_assets_dir_effective ~ '/skills')
-              if (claude_code_default_skills_dir.stat.isdir | default(false))
-              else ''
-            )
-          }}
         claude_code_output_styles_src_effective: >-
           {{
             claude_code_output_styles_src
@@ -209,10 +190,8 @@
         agent_claude_code_plugins_to_install: "{{ claude_code_plugins_to_install_effective }}"
         agent_claude_code_settings: "{{ claude_code_settings_effective }}"
         agent_claude_code_user_json: "{{ claude_code_user_json_effective }}"
-        agent_claude_code_skills_src: "{{ claude_code_skills_src_effective }}"
         agent_claude_code_output_styles_src: "{{ claude_code_output_styles_src_effective }}"
         agent_claude_code_claude_md_src: "{{ claude_code_claude_md_src_effective }}"
-        agent_claude_code_skills_delete: "{{ claude_code_skills_delete | default(true) | bool }}"
         agent_claude_code_output_styles_delete: "{{ claude_code_output_styles_delete | default(true) | bool }}"
       tags:
         - always

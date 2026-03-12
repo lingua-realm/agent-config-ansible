@@ -1,0 +1,197 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 5：验证 Codex 配置结果
+      ========================================
+
+- name: 检查 config.toml 是否存在
+  stat:
+    path: "{{ agent_codex_config_path }}"
+  register: agent_codex_config_stat
+  when: agent_codex_manage_config | bool
+
+- name: 验证 config.toml 存在
+  assert:
+    that:
+      - agent_codex_config_stat.stat.exists
+      - agent_codex_config_stat.stat.isreg
+    fail_msg: "config.toml 不存在"
+    success_msg: "✓ config.toml 已生成"
+  when: agent_codex_manage_config | bool
+
+- name: 解析 config.toml
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - import json, pathlib, sys, tomllib; print(json.dumps(tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+      - "{{ agent_codex_config_path }}"
+  register: agent_codex_config_parse
+  changed_when: false
+  when: agent_codex_manage_config | bool
+
+- name: 保存解析后的 config.toml
+  set_fact:
+    agent_codex_config_data: "{{ agent_codex_config_parse.stdout | from_json }}"
+  changed_when: false
+  when: agent_codex_manage_config | bool
+
+- name: 验证 config.toml 核心字段
+  assert:
+    that:
+      - agent_codex_config_data.model == agent_codex_config_normalized.model
+    fail_msg: "config.toml model 字段不匹配"
+    success_msg: "✓ config.toml model 字段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.model | default('') | length > 0
+
+- name: 验证 config.toml profile 字段
+  assert:
+    that:
+      - agent_codex_config_data.profile == agent_codex_config_normalized.profile
+    fail_msg: "config.toml profile 字段不匹配"
+    success_msg: "✓ config.toml profile 字段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.profile | default('') | length > 0
+
+- name: 验证 config.toml model_provider 字段
+  assert:
+    that:
+      - agent_codex_config_data.model_provider == agent_codex_config_normalized.model_provider
+    fail_msg: "config.toml model_provider 字段不匹配"
+    success_msg: "✓ config.toml model_provider 字段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.model_provider | default('') | length > 0
+
+- name: 验证 config.toml sandbox_mode 字段
+  assert:
+    that:
+      - agent_codex_config_data.sandbox_mode == agent_codex_config_normalized.sandbox_mode
+    fail_msg: "config.toml sandbox_mode 字段不匹配"
+    success_msg: "✓ config.toml sandbox_mode 字段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.sandbox_mode is defined
+    - agent_codex_config_normalized.sandbox_mode is not none
+
+- name: 验证 config.toml approval_policy 字段
+  assert:
+    that:
+      - agent_codex_config_data.approval_policy == agent_codex_config_normalized.approval_policy
+    fail_msg: "config.toml approval_policy 字段不匹配"
+    success_msg: "✓ config.toml approval_policy 字段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.approval_policy is defined
+    - agent_codex_config_normalized.approval_policy is not none
+
+- name: 验证 history 已正确写入
+  assert:
+    that:
+      - agent_codex_config_data.history is defined
+      - >-
+        agent_codex_config_data.history
+        == (
+          agent_codex_config_data.history
+          | combine(agent_codex_config_normalized.history, recursive=True, list_merge='replace')
+        )
+    fail_msg: "config.toml history 段未至少包含期望配置"
+    success_msg: "✓ config.toml history 段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.history is defined
+    - agent_codex_config_normalized.history is mapping
+    - agent_codex_config_normalized.history | length > 0
+
+- name: 验证 features 已正确写入
+  assert:
+    that:
+      - agent_codex_config_data.features is defined
+      - >-
+        agent_codex_config_data.features
+        == (
+          agent_codex_config_data.features
+          | combine(agent_codex_config_normalized.features, recursive=True, list_merge='replace')
+        )
+    fail_msg: "config.toml features 段未至少包含期望配置"
+    success_msg: "✓ config.toml features 段正确"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.features is defined
+    - agent_codex_config_normalized.features is mapping
+    - agent_codex_config_normalized.features | length > 0
+
+- name: 验证 model_providers 已正确写入
+  assert:
+    that:
+      - agent_codex_config_data.model_providers[item.key] is defined
+      - agent_codex_config_data.model_providers[item.key] is mapping
+      - >-
+        agent_codex_config_data.model_providers[item.key]
+        == (
+          agent_codex_config_data.model_providers[item.key]
+          | combine(item.value, recursive=True, list_merge='replace')
+        )
+    fail_msg: "config.toml 中的 model_provider {{ item.key }} 未至少包含期望配置"
+    success_msg: "✓ model_provider {{ item.key }} 至少包含期望配置"
+  loop: "{{ agent_codex_config_normalized.model_providers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.model_providers | length > 0
+
+- name: 验证 mcp_servers 已正确写入
+  assert:
+    that:
+      - agent_codex_config_data.mcp_servers[item.key] is defined
+      - agent_codex_config_data.mcp_servers[item.key] is mapping
+      - >-
+        agent_codex_config_data.mcp_servers[item.key]
+        == (
+          agent_codex_config_data.mcp_servers[item.key]
+          | combine(item.value, recursive=True, list_merge='replace')
+        )
+    fail_msg: "config.toml 中的 MCP Server {{ item.key }} 未至少包含期望配置"
+    success_msg: "✓ MCP Server {{ item.key }} 至少包含期望配置"
+  loop: "{{ agent_codex_config_normalized.mcp_servers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_config_normalized.mcp_servers | length > 0
+
+- name: 检查 .env 是否存在
+  stat:
+    path: "{{ agent_codex_env_path }}"
+  register: agent_codex_env_stat
+  when: agent_codex_should_manage_env | bool
+
+- name: 验证 .env 已同步
+  assert:
+    that:
+      - agent_codex_env_stat.stat.exists
+      - agent_codex_env_stat.stat.isreg
+    fail_msg: ".env 未同步成功"
+    success_msg: "✓ .env 已同步"
+  when: agent_codex_should_manage_env | bool
+
+- name: 检查 AGENTS.md 是否存在
+  stat:
+    path: "{{ agent_codex_agents_md_path }}"
+  register: agent_codex_agents_md_stat
+  when: agent_codex_should_manage_agents_md | bool
+
+- name: 验证 AGENTS.md 已同步
+  assert:
+    that:
+      - agent_codex_agents_md_stat.stat.exists
+      - agent_codex_agents_md_stat.stat.isreg
+    fail_msg: "AGENTS.md 未同步成功"
+    success_msg: "✓ AGENTS.md 已同步"
+  when: agent_codex_should_manage_agents_md | bool

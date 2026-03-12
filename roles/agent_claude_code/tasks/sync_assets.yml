@@ -22,22 +22,6 @@
   changed_when: false
   when: agent_claude_code_output_styles_src_normalized | length > 0
 
-- name: 同步 skills 目录
-  include_role:
-    name: managed_tree
-  vars:
-    managed_tree_display_name: Claude skills
-    managed_tree_src: "{{ agent_claude_code_skills_src_normalized }}"
-    managed_tree_dest: "{{ agent_claude_code_home_dir }}/skills/"
-    managed_tree_delete: "{{ agent_claude_code_skills_delete }}"
-  when: agent_claude_code_skills_src_normalized | length > 0
-
-- name: 记录 skills 同步结果
-  set_fact:
-    agent_claude_code_skills_result: "{{ managed_tree_result }}"
-  changed_when: false
-  when: agent_claude_code_skills_src_normalized | length > 0
-
 - name: 同步 CLAUDE.md
   include_role:
     name: managed_file

@@ -1,0 +1,27 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 3：同步 .env
+      ========================================
+
+- name: 通过 managed_file 管理 .env
+  include_role:
+    name: managed_file
+  vars:
+    managed_file_display_name: .env
+    managed_file_dest: "{{ agent_codex_env_path }}"
+    managed_file_temp_path: "{{ agent_codex_temp_root }}/codex.env.rendered"
+    managed_file_template_src: "{{ agent_codex_role_path }}/templates/env.j2"
+    managed_file_mode: "0600"
+    managed_file_compare_kind: plain
+    managed_file_confirm: "{{ agent_codex_confirm_env_update }}"
+    managed_file_backup: "{{ agent_codex_backup }}"
+    managed_file_backup_dir: "{{ agent_codex_env_backup_dir }}"
+    managed_file_backup_prefix: "{{ agent_codex_env_backup_prefix }}"
+
+- name: 记录 .env 同步结果
+  set_fact:
+    agent_codex_env_result: "{{ managed_file_result }}"
+  changed_when: false

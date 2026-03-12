@@ -1,0 +1,133 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 1：校验 Codex 配置输入
+      ========================================
+
+- name: 校验 Codex 角色输入
+  assert:
+    that:
+      - agent_codex_home_dir | length > 0
+      - agent_codex_config_path | length > 0
+      - agent_codex_env_path | length > 0
+      - agent_codex_agents_md_path | length > 0
+      - agent_codex_temp_root | length > 0
+      - agent_codex_config is mapping
+      - agent_codex_env is mapping
+    fail_msg: >-
+      agent_codex 角色参数无效：请确保 home_dir / config_path / env_path / agents_md_path /
+      temp_root 非空，且 config / env 为对象结构。
+
+- name: 归一化 Codex 配置对象
+  set_fact:
+    agent_codex_config_normalized: >-
+      {{
+        {
+          'model': '',
+          'profile': '',
+          'model_provider': '',
+          'model_providers': {},
+          'mcp_servers': {}
+        } | combine(agent_codex_config, recursive=True)
+      }}
+    agent_codex_env_normalized: "{{ agent_codex_env | default({}) }}"
+  changed_when: false
+
+- name: 校验归一化后的 Codex 配置
+  assert:
+    that:
+      - >-
+        (agent_codex_config_normalized.model | default('') | length > 0)
+        or (agent_codex_config_normalized.profile | default('') | length > 0)
+      - agent_codex_config_normalized.model_providers is mapping
+      - agent_codex_config_normalized.mcp_servers is mapping
+    fail_msg: >-
+      agent_codex 角色参数无效：请至少提供 model 或 profile，
+      并确保 model_providers 与 mcp_servers 为对象结构。
+  when: agent_codex_manage_config | bool
+
+- name: 归一化 Codex 辅助变量
+  set_fact:
+    agent_codex_should_manage_env: >-
+      {{
+        (agent_codex_manage_env | bool)
+        and (agent_codex_env_normalized | length > 0)
+      }}
+    agent_codex_should_manage_agents_md: >-
+      {{
+        (agent_codex_manage_agents_md | bool)
+        and (agent_codex_agents_md_src | length > 0)
+      }}
+    agent_codex_config_result:
+      changed: false
+      path: "{{ agent_codex_config_path }}"
+    agent_codex_env_result:
+      changed: false
+      path: "{{ agent_codex_env_path }}"
+    agent_codex_agents_md_result:
+      changed: false
+      path: "{{ agent_codex_agents_md_path }}"
+    agent_codex_role_path: "{{ role_path }}"
+    agent_codex_codex_cli_status: {}
+  changed_when: false
+
+- name: 确保 Codex 目录存在
+  file:
+    path: "{{ agent_codex_home_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: 确保 Codex 临时目录存在
+  file:
+    path: "{{ agent_codex_temp_root }}"
+    state: directory
+    mode: "0700"
+
+- name: 检查外部 AGENTS.md 文件
+  stat:
+    path: "{{ agent_codex_agents_md_src }}"
+  register: agent_codex_agents_md_src_stat
+  delegate_to: localhost
+  become: false
+  when: agent_codex_agents_md_src | length > 0
+
+- name: 校验外部 AGENTS.md 文件
+  assert:
+    that:
+      - agent_codex_agents_md_src_stat.stat.exists
+      - agent_codex_agents_md_src_stat.stat.isreg
+    fail_msg: "外部 AGENTS.md 文件不存在或不是普通文件：{{ agent_codex_agents_md_src }}"
+  when: agent_codex_agents_md_src | length > 0
+
+- name: 检查 Codex CLI
+  include_role:
+    name: npm_command_bootstrap
+  vars:
+    npm_command_bootstrap_key: codex
+    npm_command_bootstrap_display_name: Codex CLI
+    npm_command_bootstrap_command: codex
+    npm_command_bootstrap_version_command: codex --version
+    npm_command_bootstrap_auto_install_npm: >-
+      {{ agent_codex_codex_auto_install_npm if (agent_codex_codex_auto_install_npm | length > 0) else omit }}
+    npm_command_bootstrap_required: "{{ agent_codex_require_codex_cli | bool }}"
+    npm_command_bootstrap_fail_message: "未检测到可用的 Codex CLI，无法继续执行 Codex 配置。"
+    npm_command_bootstrap_install_fail_message: "Codex CLI 自动安装失败，请检查 npm 环境或手动安装。"
+  when: agent_codex_require_codex_cli | bool
+
+- name: 暴露 Codex CLI 状态
+  set_fact:
+    agent_codex_codex_cli_status: "{{ npm_command_bootstrap_results.codex | default({}) }}"
+  changed_when: false
+  when:
+    - agent_codex_require_codex_cli | bool
+    - npm_command_bootstrap_results is defined
+
+- name: 显示 Codex CLI 状态汇总
+  debug:
+    msg: |
+      ----------------------------------------
+      Codex CLI：{{ agent_codex_codex_cli_status.version | default('未检查') }}
+      ----------------------------------------
+  when: agent_codex_require_codex_cli | bool

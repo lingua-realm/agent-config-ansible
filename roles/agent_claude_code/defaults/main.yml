@@ -95,10 +95,8 @@ agent_claude_code_user_json:
   mcpServers: {}
 
 # 可选外部资源路径；为空时不管理
-agent_claude_code_skills_src: ""
 agent_claude_code_output_styles_src: ""
 agent_claude_code_claude_md_src: ""
 
-# 同步 skills / output-styles 时是否删除目标端多余文件
-agent_claude_code_skills_delete: true
+# 同步 output-styles 时是否删除目标端多余文件
 agent_claude_code_output_styles_delete: true

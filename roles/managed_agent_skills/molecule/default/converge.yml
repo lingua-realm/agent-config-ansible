@@ -1,0 +1,123 @@
+---
+- name: Converge — 声明式管理 agent skills
+  hosts: all
+  environment:
+    PATH: "{{ managed_agent_skills_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    FAKE_SKILLS_STATE: "{{ managed_agent_skills_state_path }}"
+  vars:
+    managed_agent_skills_test_root: /tmp/managed-agent-skills/default
+    managed_agent_skills_fake_bin: "{{ managed_agent_skills_test_root }}/fake-bin"
+    managed_agent_skills_state_path: "{{ managed_agent_skills_test_root }}/fake-skills-state.json"
+    managed_agent_skills_project_dir_test: "{{ managed_agent_skills_test_root }}/project-a"
+  tasks:
+    - name: 准备测试目录
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ managed_agent_skills_test_root }}"
+        - "{{ managed_agent_skills_fake_bin }}"
+        - "{{ managed_agent_skills_project_dir_test }}"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 安装假 skills CLI
+      copy:
+        src: "{{ playbook_dir }}/files/fake-bin/skills"
+        dest: "{{ managed_agent_skills_fake_bin }}/skills"
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 下发本地 skills 源目录
+      copy:
+        src: "{{ playbook_dir }}/files/skill-source/"
+        dest: "{{ managed_agent_skills_test_root }}/skill-source/"
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 预置假 skills 状态
+      copy:
+        dest: "{{ managed_agent_skills_state_path }}"
+        mode: "0644"
+        content: |
+          {
+            "scopes": {
+              "global": {
+                "legacy-skill": {
+                  "agents": [
+                    "codex"
+                  ],
+                  "mode": "symlink",
+                  "source": "legacy/repo"
+                }
+              }
+            }
+          }
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行 managed_agent_skills 角色
+      include_role:
+        name: managed_agent_skills
+      vars:
+        managed_agent_skills_auto_install_npm: ""
+        managed_agent_skills_project_dir: "{{ managed_agent_skills_project_dir_test }}"
+        managed_agent_skills_command_env:
+          FAKE_SKILLS_STATE: "{{ managed_agent_skills_state_path }}"
+        managed_agent_skills_items:
+          - name: 安装全局 frontend skill
+            state: present
+            source: "{{ managed_agent_skills_test_root }}/skill-source"
+            skills:
+              - frontend-design
+            agents:
+              - claude-code
+              - codex
+            scope: global
+
+          - name: 安装项目级 release-notes skill
+            state: present
+            source: "{{ managed_agent_skills_test_root }}/skill-source"
+            skills:
+              - release-notes
+            agents:
+              - claude-code
+            scope: project
+            mode: copy
+
+          - name: 卸载遗留 skill
+            state: absent
+            skills:
+              - legacy-skill
+            agents:
+              - codex
+            scope: global
+
+    - name: 读取最终状态文件
+      slurp:
+        src: "{{ managed_agent_skills_state_path }}"
+      register: managed_agent_skills_state_raw
+
+    - name: 保存最终状态文件
+      set_fact:
+        managed_agent_skills_state: "{{ managed_agent_skills_state_raw.content | b64decode | from_json }}"
+      changed_when: false
+
+    - name: 断言首次执行产生预期变更
+      assert:
+        that:
+          - managed_agent_skills_result.changed | bool
+          - managed_agent_skills_result['items'] | length == 3
+          - managed_agent_skills_state.scopes['global']['frontend-design'].agents == ['claude-code', 'codex']
+          - managed_agent_skills_state.scopes['global']['frontend-design'].mode == 'symlink'
+          - "'legacy-skill' not in managed_agent_skills_state.scopes['global']"
+          - managed_agent_skills_state.scopes['project:' ~ managed_agent_skills_project_dir_test]['release-notes'].agents == ['claude-code']
+          - managed_agent_skills_state.scopes['project:' ~ managed_agent_skills_project_dir_test]['release-notes'].mode == 'copy'
+        fail_msg: "managed_agent_skills 首次执行结果不符合预期"
+        success_msg: "✓ managed_agent_skills 首次执行通过"
+      when: "'molecule-idempotence-notest' not in (ansible_skip_tags | default([]))"
+      tags:
+        - molecule-idempotence-notest

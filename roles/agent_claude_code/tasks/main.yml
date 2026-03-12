@@ -29,7 +29,6 @@
           (agent_claude_code_plugins_result.changed | bool)
           or (agent_claude_code_user_json_result.changed | bool)
           or (agent_claude_code_settings_result.changed | bool)
-          or (agent_claude_code_skills_result.changed | bool)
           or (agent_claude_code_output_styles_result.changed | bool)
           or (agent_claude_code_claude_md_result.changed | bool)
         }}
@@ -38,7 +37,6 @@
       plugins: "{{ agent_claude_code_plugins_result }}"
       user_json: "{{ agent_claude_code_user_json_result }}"
       settings: "{{ agent_claude_code_settings_result }}"
-      skills: "{{ agent_claude_code_skills_result }}"
       output_styles: "{{ agent_claude_code_output_styles_result }}"
       claude_md: "{{ agent_claude_code_claude_md_result }}"
   changed_when: false

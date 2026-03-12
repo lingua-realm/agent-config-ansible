@@ -1,0 +1,175 @@
+---
+# playbooks/setup_codex.yml
+# Codex CLI 配置部署（基于本仓库 roles/agent_codex）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将当前仓库的 codex_* 变量桥接为 agent_codex 所需的输入
+# 2. 执行 agent_codex role，完成 config.toml、.env 与可选 AGENTS.md 同步
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_codex.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_codex.yml -e "target_hosts=all"
+#
+# 默认资源目录：
+#   inventory/<profile>/codex_assets/
+#     - AGENTS.md
+#
+# 默认备份目录（本地连接时）：
+#   <repo>/tmps/codex-backups/<inventory_hostname>/
+#     - config/
+#     - env/
+#     - agents-md/
+#
+# 可选覆盖外部资源：
+#   -e "codex_agents_md_src=/path/to/AGENTS.md"
+
+- name: Codex CLI 配置部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 计算 Codex 资产目录
+      set_fact:
+        codex_assets_dir_effective: "{{ codex_assets_dir | default(inventory_dir ~ '/codex_assets') }}"
+      tags:
+        - always
+
+    - name: 计算 Codex 备份根目录
+      set_fact:
+        codex_backup_root_effective: >-
+          {{
+            codex_backup_root
+            if (codex_backup_root is defined)
+            else (
+              (((inventory_dir | dirname) | dirname) ~ '/tmps/codex-backups/' ~ inventory_hostname)
+              if ((ansible_connection | default('ssh')) == 'local')
+              else ''
+            )
+          }}
+      tags:
+        - always
+
+    - name: 检查默认 AGENTS.md 文件
+      stat:
+        path: "{{ codex_assets_dir_effective }}/AGENTS.md"
+      register: codex_default_agents_md
+      tags:
+        - always
+
+    - name: 校验 Codex 编排输入
+      assert:
+        that:
+          - codex_settings is mapping
+          - codex_model_configs is mapping
+          - codex_use_model is string
+          - codex_use_model | length > 0
+          - codex_use_model in codex_model_configs
+          - (codex_mcp_servers | default({})) is mapping
+          - (codex_env | default({})) is mapping
+          - (codex_model_configs[codex_use_model].providers | default({})) is mapping
+          - (codex_model_configs[codex_use_model].env | default({})) is mapping
+        fail_msg: >-
+          Codex 编排输入无效：请检查 codex/settings.yml、models.yml、mcp_servers.yml
+          中的变量结构，尤其是 codex_use_model、providers、env 与 mcp_servers。
+      tags:
+        - always
+
+    - name: 归一化 agent_codex 输入变量
+      set_fact:
+        codex_agents_md_src_effective: >-
+          {{
+            codex_agents_md_src
+            if (codex_agents_md_src is defined)
+            else (
+              (codex_assets_dir_effective ~ '/AGENTS.md')
+              if (codex_default_agents_md.stat.isreg | default(false))
+              else ''
+            )
+          }}
+        codex_settings_effective: >-
+          {{
+            codex_settings
+            | dict2items
+            | rejectattr('key', 'equalto', 'confirm_codex_config_update')
+            | rejectattr('key', 'equalto', 'confirm_codex_env_update')
+            | items2dict
+          }}
+        codex_active_model_config_effective: "{{ codex_model_configs[codex_use_model] }}"
+
+    - name: 归一化派生 Codex 配置变量
+      set_fact:
+        codex_config_effective: >-
+          {{
+            codex_settings_effective
+            | combine(
+                (
+                  codex_active_model_config_effective
+                  | dict2items
+                  | rejectattr('key', 'equalto', 'providers')
+                  | rejectattr('key', 'equalto', 'env')
+                  | items2dict
+                ),
+                recursive=True
+              )
+            | combine(
+                {
+                  'model_providers': (
+                    codex_settings_effective.model_providers | default({})
+                  ) | combine(
+                    codex_active_model_config_effective.providers | default({}),
+                    recursive=True
+                  ),
+                  'mcp_servers': (
+                    codex_settings_effective.mcp_servers | default({})
+                  ) | combine(
+                    codex_mcp_servers | default({}),
+                    recursive=True
+                  )
+                },
+                recursive=True
+              )
+          }}
+        codex_env_effective: >-
+          {{
+            (codex_active_model_config_effective.env | default({}))
+            | combine(codex_env | default({}), recursive=True)
+          }}
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 agent_codex 角色
+      include_role:
+        name: agent_codex
+      vars:
+        agent_codex_home_dir: "{{ codex_home_dir | default(lookup('env', 'HOME') ~ '/.codex') }}"
+        agent_codex_config_path: "{{ codex_config_path | default((codex_home_dir | default(lookup('env', 'HOME') ~ '/.codex')) ~ '/config.toml') }}"
+        agent_codex_env_path: "{{ codex_env_path | default((codex_home_dir | default(lookup('env', 'HOME') ~ '/.codex')) ~ '/.env') }}"
+        agent_codex_agents_md_path: "{{ codex_agents_md_path | default((codex_home_dir | default(lookup('env', 'HOME') ~ '/.codex')) ~ '/AGENTS.md') }}"
+        agent_codex_temp_root: "{{ codex_temp_root | default('/tmp/agent-codex') }}"
+        agent_codex_require_codex_cli: "{{ codex_require_codex_cli | default(true) | bool }}"
+        agent_codex_codex_auto_install_npm: "{{ codex_auto_install_npm | default('@openai/codex') }}"
+        agent_codex_manage_config: "{{ codex_manage_config | default(true) | bool }}"
+        agent_codex_manage_env: "{{ codex_manage_env | default(codex_env_effective | length > 0) | bool }}"
+        agent_codex_manage_agents_md: "{{ codex_manage_agents_md | default(true) | bool }}"
+        agent_codex_run_verify: "{{ codex_run_verify | default(true) | bool }}"
+        agent_codex_confirm_config_update: "{{ codex_settings.confirm_codex_config_update | default(false) | bool }}"
+        agent_codex_confirm_env_update: "{{ codex_settings.confirm_codex_env_update | default(false) | bool }}"
+        agent_codex_backup: "{{ codex_backup | default(true) | bool }}"
+        agent_codex_backup_root: "{{ codex_backup_root_effective }}"
+        agent_codex_config: "{{ codex_config_effective }}"
+        agent_codex_env: "{{ codex_env_effective }}"
+        agent_codex_agents_md_src: "{{ codex_agents_md_src_effective }}"
+      tags:
+        - always

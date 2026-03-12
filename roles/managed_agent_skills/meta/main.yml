@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: managed_agent_skills
+  author: lingua-realm
+  description: 基于 skills CLI 声明式管理 agent skills 的安装与卸载
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: macOS
+      versions:
+        - all
+
+dependencies: []

@@ -1,0 +1,24 @@
+---
+# (可选) 声明式 skills 条目列表
+managed_agent_skills_items: []
+
+# (可选) skills CLI 命令名
+managed_agent_skills_cli_command: skills
+
+# (可选) 获取 skills CLI 版本的命令
+managed_agent_skills_cli_version_command: skills --version
+
+# (可选) skills CLI 不可用时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+managed_agent_skills_auto_install_npm: skills
+
+# (可选) 是否要求 skills CLI 可用
+managed_agent_skills_require_cli: true
+
+# (可选) 是否默认关闭 telemetry
+managed_agent_skills_disable_telemetry: true
+
+# (可选) 传给所有 skills CLI 调用的额外环境变量
+managed_agent_skills_command_env: {}
+
+# (可选) project scope 的默认工作目录；为空时必须在条目里显式提供 project_dir
+managed_agent_skills_project_dir: ""

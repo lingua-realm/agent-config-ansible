@@ -1,0 +1,28 @@
+# Codex CLI 配置文件
+# 由 Ansible 模板渲染生成，请勿手动修改
+# 模板来源：roles/agent_codex/templates/config.toml.j2
+
+{% macro render_scalar(value) -%}
+{{ value | to_json }}
+{%- endmacro %}
+
+{% macro render_table(path, table) -%}
+{% for item in table | dictsort %}
+{% set key = item.0 %}
+{% set value = item.1 %}
+{% if value is not none and value is not mapping and (value is not string or value | length > 0) %}
+{{ key }} = {{ render_scalar(value) }}
+{% endif %}
+{% endfor %}
+{% for item in table | dictsort %}
+{% set key = item.0 %}
+{% set value = item.1 %}
+{% if value is mapping and value | length > 0 %}
+
+[{{ (path + [key]) | join('.') }}]
+{{ render_table(path + [key], value) }}
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+
+{{ render_table([], agent_codex_config_normalized) }}

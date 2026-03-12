@@ -1,0 +1,92 @@
+---
+- name: Verify — Codex CLI 自动化配置幂等
+  hosts: all
+  environment:
+    PATH: "{{ agent_codex_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    agent_codex_test_root: /tmp/agent-codex/default
+    agent_codex_fake_bin: "{{ agent_codex_test_root }}/fake-bin"
+    agent_codex_home_dir_test: "{{ agent_codex_test_root }}/home/.codex"
+  tasks:
+    - name: 再次执行 agent_codex 角色
+      include_role:
+        name: agent_codex
+      vars:
+        agent_codex_home_dir: "{{ agent_codex_home_dir_test }}"
+        agent_codex_temp_root: "{{ agent_codex_test_root }}/tmp"
+        agent_codex_config:
+          model_provider: ppio
+          model: pa/gpt-5.4
+          model_reasoning_effort: xhigh
+          disable_response_storage: true
+          preferred_auth_method: apikey
+          sandbox_mode: read-only
+          history:
+            persistence: save-all
+          model_providers:
+            ppio:
+              name: PPIO (GPT-5.4)
+              base_url: https://api.ppio.com/openai/v1
+              wire_api: responses
+              env_key: PPIO_API_KEY
+          mcp_servers:
+            context7:
+              command: npx
+              args:
+                - -y
+                - '@upstash/context7-mcp'
+            fetch:
+              command: uvx
+              args:
+                - mcp-server-fetch
+            deepwiki:
+              url: https://mcp.deepwiki.com/mcp
+        agent_codex_env:
+          PPIO_API_KEY: test-key
+        agent_codex_agents_md_src: "{{ playbook_dir }}/files/AGENTS.md"
+
+    - name: 解析最终 config.toml
+      command:
+        argv:
+          - python3
+          - -c
+          - import json, pathlib, sys, tomllib; print(json.dumps(tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+          - "{{ agent_codex_home_dir_test }}/config.toml"
+      register: agent_codex_config_final
+      changed_when: false
+
+    - name: 读取最终 config.toml 文本
+      slurp:
+        src: "{{ agent_codex_home_dir_test }}/config.toml"
+      register: agent_codex_config_text_final
+
+    - name: 读取最终 .env
+      slurp:
+        src: "{{ agent_codex_home_dir_test }}/.env"
+      register: agent_codex_env_final
+
+    - name: 检查 AGENTS.md 已同步
+      stat:
+        path: "{{ agent_codex_home_dir_test }}/AGENTS.md"
+      register: agent_codex_agents_md_final
+
+    - name: 断言第二次执行保持幂等
+      assert:
+        that:
+          - not (agent_codex_result.changed | bool)
+          - (agent_codex_config_final.stdout | from_json).model == 'pa/gpt-5.4'
+          - (agent_codex_config_final.stdout | from_json).model_provider == 'ppio'
+          - (agent_codex_config_final.stdout | from_json).sandbox_mode == 'read-only'
+          - (agent_codex_config_final.stdout | from_json).history.persistence == 'save-all'
+          - (agent_codex_config_final.stdout | from_json).model_providers.ppio.env_key == 'PPIO_API_KEY'
+          - (agent_codex_config_final.stdout | from_json).mcp_servers.context7.command == 'npx'
+          - (agent_codex_config_final.stdout | from_json).mcp_servers.fetch.args == ['mcp-server-fetch']
+          - (agent_codex_config_final.stdout | from_json).mcp_servers.deepwiki.url == 'https://mcp.deepwiki.com/mcp'
+          - (agent_codex_config_final.stdout | from_json).profile is not defined
+          - >-
+            'profile = ""' not in (agent_codex_config_text_final.content | b64decode)
+          - >-
+            'PPIO_API_KEY="test-key"' in (agent_codex_env_final.content | b64decode)
+          - agent_codex_agents_md_final.stat.exists
+        fail_msg: "agent_codex 场景验证失败"
+        success_msg: "✓ agent_codex 场景通过"

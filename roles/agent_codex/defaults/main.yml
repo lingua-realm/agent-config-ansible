@@ -1,0 +1,74 @@
+---
+# Codex 配置根目录
+agent_codex_home_dir: "{{ lookup('env', 'HOME') }}/.codex"
+
+# Codex 核心文件路径
+agent_codex_config_path: "{{ agent_codex_home_dir }}/config.toml"
+agent_codex_env_path: "{{ agent_codex_home_dir }}/.env"
+agent_codex_agents_md_path: "{{ agent_codex_home_dir }}/AGENTS.md"
+
+# 角色工作临时目录
+agent_codex_temp_root: /tmp/agent-codex
+
+# 是否要求 Codex CLI 可用
+agent_codex_require_codex_cli: true
+
+# Codex CLI 不可用时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+agent_codex_codex_auto_install_npm: "@openai/codex"
+
+# 是否管理 config.toml / .env / AGENTS.md 以及执行最终验证
+agent_codex_manage_config: true
+agent_codex_manage_env: true
+agent_codex_manage_agents_md: true
+agent_codex_run_verify: true
+
+# 是否在变更 config.toml / .env 时交互确认
+agent_codex_confirm_config_update: false
+agent_codex_confirm_env_update: false
+
+# 是否为 config.toml / .env / AGENTS.md 创建备份
+agent_codex_backup: true
+
+# 统一备份根目录；为空时回退到各托管文件默认的就地备份目录
+agent_codex_backup_root: ""
+
+# config.toml 备份目录与前缀
+agent_codex_config_backup_dir: >-
+  {{
+    ((agent_codex_backup_root | regex_replace('/+$', '')) ~ '/config')
+    if (agent_codex_backup_root | length > 0)
+    else ((agent_codex_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_codex_config_backup_prefix: config.toml
+
+# .env 备份目录与前缀
+agent_codex_env_backup_dir: >-
+  {{
+    ((agent_codex_backup_root | regex_replace('/+$', '')) ~ '/env')
+    if (agent_codex_backup_root | length > 0)
+    else ((agent_codex_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_codex_env_backup_prefix: codex.env
+
+# AGENTS.md 备份目录与前缀
+agent_codex_agents_md_backup_dir: >-
+  {{
+    ((agent_codex_backup_root | regex_replace('/+$', '')) ~ '/agents-md')
+    if (agent_codex_backup_root | length > 0)
+    else ((agent_codex_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_codex_agents_md_backup_prefix: AGENTS.md
+
+# 生成 config.toml 的对象
+agent_codex_config:
+  model: ""
+  profile: ""
+  model_provider: ""
+  model_providers: {}
+  mcp_servers: {}
+
+# 渲染到 ~/.codex/.env 的环境变量
+agent_codex_env: {}
+
+# 可选外部资源路径；为空时不管理
+agent_codex_agents_md_src: ""

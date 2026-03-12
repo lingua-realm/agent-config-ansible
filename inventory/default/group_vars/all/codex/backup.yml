@@ -1,0 +1,10 @@
+# Codex CLI 备份根目录
+# 本地连接执行时，默认写到当前仓库的 tmps/codex-backups/<inventory_hostname>/ 下。
+# 远端主机场景下如果不显式设置，则由 playbook 回退到各目标文件旁边的默认备份目录。
+
+codex_backup_root: >-
+  {{
+    (((inventory_dir | dirname) | dirname) ~ '/tmps/codex-backups/' ~ inventory_hostname)
+    if ((ansible_connection | default('ssh')) == 'local')
+    else ''
+  }}

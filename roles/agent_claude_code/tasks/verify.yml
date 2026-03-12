@@ -137,21 +137,6 @@
     success_msg: "✓ output-styles 目录已同步"
   when: agent_claude_code_output_styles_src | length > 0
 
-- name: 检查 skills 目录
-  stat:
-    path: "{{ agent_claude_code_home_dir }}/skills"
-  register: agent_claude_code_skills_stat
-  when: agent_claude_code_skills_src | length > 0
-
-- name: 验证 skills 目录存在
-  assert:
-    that:
-      - agent_claude_code_skills_stat.stat.exists
-      - agent_claude_code_skills_stat.stat.isdir
-    fail_msg: "skills 目录未同步成功"
-    success_msg: "✓ skills 目录已同步"
-  when: agent_claude_code_skills_src | length > 0
-
 - name: 检查 CLAUDE.md 是否存在
   stat:
     path: "{{ agent_claude_code_home_dir }}/CLAUDE.md"

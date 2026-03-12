@@ -119,7 +119,6 @@
               command: node
               args:
                 - server.js
-        agent_claude_code_skills_src: "{{ playbook_dir }}/files/skills"
         agent_claude_code_output_styles_src: "{{ playbook_dir }}/files/output-styles"
         agent_claude_code_claude_md_src: "{{ playbook_dir }}/files/CLAUDE.md"
         agent_claude_code_verify_schema: false

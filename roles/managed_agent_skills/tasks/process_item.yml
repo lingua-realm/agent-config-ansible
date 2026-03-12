@@ -1,0 +1,236 @@
+---
+- name: 归一化当前 skills 条目
+  set_fact:
+    managed_agent_skills_item_normalized:
+      name: "{{ managed_agent_skills_item.name | default('') }}"
+      state: "{{ managed_agent_skills_item.state | default('present') }}"
+      source: "{{ managed_agent_skills_item.source | default('') }}"
+      skills: "{{ managed_agent_skills_item.skills | default([]) | unique | list }}"
+      agents: "{{ managed_agent_skills_item.agents | default([]) | unique | list }}"
+      scope: "{{ managed_agent_skills_item.scope | default('global') }}"
+      mode: "{{ managed_agent_skills_item.mode | default('symlink') }}"
+      project_dir: "{{ managed_agent_skills_item.project_dir | default(managed_agent_skills_project_dir) }}"
+      env: "{{ managed_agent_skills_item.env | default({}) }}"
+  changed_when: false
+
+- name: 校验当前 skills 条目
+  assert:
+    that:
+      - managed_agent_skills_item_normalized.state in ['present', 'absent']
+      - managed_agent_skills_item_normalized.skills is sequence
+      - managed_agent_skills_item_normalized.skills is not string
+      - managed_agent_skills_item_normalized.skills | length > 0
+      - managed_agent_skills_item_normalized.agents is sequence
+      - managed_agent_skills_item_normalized.agents is not string
+      - managed_agent_skills_item_normalized.agents | length > 0
+      - managed_agent_skills_item_normalized.scope in ['global', 'project']
+      - managed_agent_skills_item_normalized.mode in ['symlink', 'copy']
+      - managed_agent_skills_item_normalized.env is mapping
+      - managed_agent_skills_item_normalized.state == 'absent' or managed_agent_skills_item_normalized.source | length > 0
+      - not ('*' in managed_agent_skills_item_normalized.skills and (managed_agent_skills_item_normalized.skills | length) > 1)
+      - not ('*' in managed_agent_skills_item_normalized.agents and (managed_agent_skills_item_normalized.agents | length) > 1)
+      - not (managed_agent_skills_item_normalized.state == 'present' and ('*' in managed_agent_skills_item_normalized.skills))
+      - not (managed_agent_skills_item_normalized.state == 'present' and ('*' in managed_agent_skills_item_normalized.agents))
+      - managed_agent_skills_item_normalized.scope != 'project' or managed_agent_skills_item_normalized.project_dir | length > 0
+    fail_msg: >-
+      managed_agent_skills 条目无效：present 必须显式提供 source / skills / agents，
+      scope 仅支持 global/project，mode 仅支持 symlink/copy，project scope 必须提供 project_dir。
+
+- name: 构建当前条目辅助变量
+  set_fact:
+    managed_agent_skills_item_label: >-
+      {{
+        managed_agent_skills_item_normalized.name
+        if (managed_agent_skills_item_normalized.name | length > 0)
+        else (
+          (managed_agent_skills_item_normalized.skills | join(','))
+          ~ '@'
+          ~ managed_agent_skills_item_normalized.scope
+        )
+      }}
+    managed_agent_skills_item_env: >-
+      {{
+        managed_agent_skills_command_env_effective
+        | combine(managed_agent_skills_item_normalized.env, recursive=True)
+      }}
+    managed_agent_skills_item_probe_agents: >-
+      {{
+        ['__all__']
+        if ('*' in managed_agent_skills_item_normalized.agents)
+        else managed_agent_skills_item_normalized.agents
+      }}
+    managed_agent_skills_item_present_names: []
+    managed_agent_skills_item_missing_by_agent: {}
+  changed_when: false
+
+- name: 构建当前条目 list 命令
+  set_fact:
+    managed_agent_skills_item_probe_argv: >-
+      {{
+        [managed_agent_skills_cli_command, 'list', '--json']
+        + (['--global'] if managed_agent_skills_item_normalized.scope == 'global' else [])
+      }}
+  changed_when: false
+
+- name: 查询当前条目已安装的 skills
+  command:
+    argv: >-
+      {{
+        managed_agent_skills_item_probe_argv
+        + ([] if managed_agent_skills_probe_agent == '__all__' else ['-a', managed_agent_skills_probe_agent])
+      }}
+  register: managed_agent_skills_item_probe
+  changed_when: false
+  environment: "{{ managed_agent_skills_item_env }}"
+  args:
+    chdir: "{{ managed_agent_skills_item_normalized.project_dir if managed_agent_skills_item_normalized.scope == 'project' else omit }}"
+  loop: "{{ managed_agent_skills_item_probe_agents }}"
+  loop_control:
+    loop_var: managed_agent_skills_probe_agent
+    label: "{{ managed_agent_skills_item_label }} -> {{ managed_agent_skills_probe_agent }}"
+
+- name: 汇总当前条目已安装的 skill 名称
+  set_fact:
+    managed_agent_skills_item_present_names: >-
+      {{
+        managed_agent_skills_item_present_names
+        | union((managed_agent_skills_probe_result.stdout | from_json | map(attribute='name') | list))
+      }}
+  loop: "{{ managed_agent_skills_item_probe.results }}"
+  loop_control:
+    loop_var: managed_agent_skills_probe_result
+    label: "{{ managed_agent_skills_item_label }} -> {{ managed_agent_skills_probe_result.managed_agent_skills_probe_agent }}"
+  changed_when: false
+
+- name: 计算当前 present 条目的缺失 skill
+  set_fact:
+    managed_agent_skills_item_missing_by_agent: >-
+      {{
+        managed_agent_skills_item_missing_by_agent
+        | combine(
+            {
+              managed_agent_skills_probe_result.managed_agent_skills_probe_agent: (
+                managed_agent_skills_item_normalized.skills
+                | difference(managed_agent_skills_probe_result.stdout | from_json | map(attribute='name') | list)
+              )
+            },
+            recursive=True
+          )
+      }}
+  loop: "{{ managed_agent_skills_item_probe.results }}"
+  loop_control:
+    loop_var: managed_agent_skills_probe_result
+    label: "{{ managed_agent_skills_item_label }} -> {{ managed_agent_skills_probe_result.managed_agent_skills_probe_agent }}"
+  changed_when: false
+  when: managed_agent_skills_item_normalized.state == 'present'
+
+- name: 判定当前条目是否需要执行
+  set_fact:
+    managed_agent_skills_item_should_apply: >-
+      {{
+        (
+          (managed_agent_skills_item_missing_by_agent | dict2items | map(attribute='value') | map('length') | sum) > 0
+        )
+        if managed_agent_skills_item_normalized.state == 'present'
+        else
+        (
+          (managed_agent_skills_item_present_names | length) > 0
+          if ('*' in managed_agent_skills_item_normalized.skills)
+          else ((managed_agent_skills_item_present_names | intersect(managed_agent_skills_item_normalized.skills) | length) > 0)
+        )
+      }}
+  changed_when: false
+
+- name: 构建当前条目的 add/remove 命令
+  set_fact:
+    managed_agent_skills_item_add_argv: >-
+      {{
+        [managed_agent_skills_cli_command, 'add', managed_agent_skills_item_normalized.source]
+        + (['--global'] if managed_agent_skills_item_normalized.scope == 'global' else [])
+        + (['--copy'] if managed_agent_skills_item_normalized.mode == 'copy' else [])
+        + ['-a'] + managed_agent_skills_item_normalized.agents
+        + ['--skill'] + managed_agent_skills_item_normalized.skills
+        + ['-y']
+      }}
+    managed_agent_skills_item_remove_argv: >-
+      {{
+        [managed_agent_skills_cli_command, 'remove']
+        + (['--global'] if managed_agent_skills_item_normalized.scope == 'global' else [])
+        + ['-a'] + managed_agent_skills_item_normalized.agents
+        + ['--skill'] + managed_agent_skills_item_normalized.skills
+        + ['-y']
+      }}
+  changed_when: false
+
+- name: 安装声明式 skills 条目
+  command:
+    argv: "{{ managed_agent_skills_item_add_argv }}"
+  register: managed_agent_skills_item_command
+  changed_when: true
+  environment: "{{ managed_agent_skills_item_env }}"
+  args:
+    chdir: "{{ managed_agent_skills_item_normalized.project_dir if managed_agent_skills_item_normalized.scope == 'project' else omit }}"
+  when:
+    - managed_agent_skills_item_normalized.state == 'present'
+    - managed_agent_skills_item_should_apply | bool
+
+- name: 卸载声明式 skills 条目
+  command:
+    argv: "{{ managed_agent_skills_item_remove_argv }}"
+  register: managed_agent_skills_item_command
+  changed_when: true
+  environment: "{{ managed_agent_skills_item_env }}"
+  args:
+    chdir: "{{ managed_agent_skills_item_normalized.project_dir if managed_agent_skills_item_normalized.scope == 'project' else omit }}"
+  when:
+    - managed_agent_skills_item_normalized.state == 'absent'
+    - managed_agent_skills_item_should_apply | bool
+
+- name: 汇总当前条目结果
+  set_fact:
+    managed_agent_skills_item_result:
+      name: "{{ managed_agent_skills_item_label }}"
+      state: "{{ managed_agent_skills_item_normalized.state }}"
+      scope: "{{ managed_agent_skills_item_normalized.scope }}"
+      mode: "{{ managed_agent_skills_item_normalized.mode }}"
+      source: "{{ managed_agent_skills_item_normalized.source }}"
+      skills: "{{ managed_agent_skills_item_normalized.skills }}"
+      agents: "{{ managed_agent_skills_item_normalized.agents }}"
+      project_dir: >-
+        {{
+          managed_agent_skills_item_normalized.project_dir
+          if managed_agent_skills_item_normalized.scope == 'project'
+          else ''
+        }}
+      changed: "{{ managed_agent_skills_item_should_apply | bool }}"
+      action: >-
+        {{
+          'add'
+          if (
+            managed_agent_skills_item_normalized.state == 'present'
+            and (managed_agent_skills_item_should_apply | bool)
+          )
+          else (
+            'remove'
+            if (
+              managed_agent_skills_item_normalized.state == 'absent'
+              and (managed_agent_skills_item_should_apply | bool)
+            )
+            else 'none'
+          )
+        }}
+      installed_before: "{{ managed_agent_skills_item_present_names }}"
+      missing_by_agent: >-
+        {{
+          managed_agent_skills_item_missing_by_agent
+          if managed_agent_skills_item_normalized.state == 'present'
+          else {}
+        }}
+      stdout: "{{ managed_agent_skills_item_command.stdout | default('') }}"
+      stderr: "{{ managed_agent_skills_item_command.stderr | default('') }}"
+  changed_when: false
+
+- name: 追加当前条目结果
+  set_fact:
+    managed_agent_skills_results: "{{ managed_agent_skills_results + [managed_agent_skills_item_result] }}"
+  changed_when: false

@@ -6,9 +6,9 @@
 - 管理插件 marketplace 与插件安装
 - deep merge `~/.claude.json`
 - 生成并同步 `~/.claude/settings.json`
-- 按需同步外部 `skills`、`output-styles` 和 `CLAUDE.md`
+- 按需同步外部 `output-styles` 和 `CLAUDE.md`
 
-这个 role 不再内置 `agents`、`skills`、`output-styles` 目录内容；其中 `skills` 与 `output-styles` 需要通过外部路径传入，`agents` 目录完全不管理。
+这个 role 不再内置 `agents`、`output-styles` 目录内容；其中 `output-styles` 需要通过外部路径传入，`skills` 建议改由 `managed_agent_skills` role 统一管理，`agents` 目录完全不管理。
 
 ## 依赖的基础 role
 
@@ -40,10 +40,8 @@
 | `agent_claude_code_plugins_to_install` | ❌ | `[]` | 显式安装的插件列表；为空时回退到 `settings.enabledPlugins` |
 | `agent_claude_code_settings` | ✅ | 见 defaults | 用于生成 `settings.json` 的配置对象 |
 | `agent_claude_code_user_json` | ❌ | `hasCompletedOnboarding + 空 mcpServers` | 将被 deep merge 到 `~/.claude.json` 的对象 |
-| `agent_claude_code_skills_src` | ❌ | `""` | 外部 skills 目录路径；为空时不管理 |
 | `agent_claude_code_output_styles_src` | ❌ | `""` | 外部 output-styles 目录路径；为空时不管理 |
 | `agent_claude_code_claude_md_src` | ❌ | `""` | 外部 `CLAUDE.md` 文件路径；为空时不管理 |
-| `agent_claude_code_skills_delete` | ❌ | `true` | 同步 skills 时是否删除目标端多余文件 |
 | `agent_claude_code_output_styles_delete` | ❌ | `true` | 同步 output-styles 时是否删除目标端多余文件 |
 
 ## `agent_claude_code_settings` 结构
@@ -130,16 +128,16 @@ agent_claude_code_result:
               command: node
               args:
                 - server.js
-        agent_claude_code_skills_src: "{{ playbook_dir }}/files/skills"
         agent_claude_code_output_styles_src: "{{ playbook_dir }}/files/output-styles"
         agent_claude_code_claude_md_src: "{{ playbook_dir }}/files/CLAUDE.md"
 ```
 
 ## 说明
 
-- `skills` 和 `output-styles` 必须通过外部路径传入，本 role 不再内置这些目录内容。
+- `output-styles` 必须通过外部路径传入，本 role 不再内置这些目录内容。
+- `skills` 不再由本 role 直接同步，建议改用 `managed_agent_skills` role 统一管理。
 - 本 role 不管理 `agents` 目录，也不会主动创建它。
 - `agent_claude_code_plugins_to_install` 为空时，会自动使用 `agent_claude_code_settings.enabledPlugins` 作为插件安装目标。
-- `agent_claude_code_output_styles_src` 和 `agent_claude_code_skills_src` 会自动归一化为以 `/` 结尾的目录同步语义。
+- `agent_claude_code_output_styles_src` 会自动归一化为以 `/` 结尾的目录同步语义。
 - `agent_claude_code_confirm_settings_update` 和 `agent_claude_code_confirm_user_json_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
 - 设置 `agent_claude_code_backup_root` 后，`settings.json`、`~/.claude.json` 和 `CLAUDE.md` 的备份会分别写入其下的 `settings/`、`user-json/`、`claude-md/` 子目录。

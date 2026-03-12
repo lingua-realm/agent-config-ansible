@@ -90,12 +90,6 @@
         agent_claude_code_settings_normalized.statusLine.type | default('') == 'command'
         and agent_claude_code_settings_normalized.statusLine.command | default('') == 'ccline'
       }}
-    agent_claude_code_skills_src_normalized: >-
-      {{
-        ((agent_claude_code_skills_src | regex_replace('/+$', '')) ~ '/')
-        if (agent_claude_code_skills_src | length > 0)
-        else ''
-      }}
     agent_claude_code_output_styles_src_normalized: >-
       {{
         ((agent_claude_code_output_styles_src | regex_replace('/+$', '')) ~ '/')
@@ -112,9 +106,6 @@
     agent_claude_code_settings_result:
       changed: false
       path: "{{ agent_claude_code_home_dir }}/settings.json"
-    agent_claude_code_skills_result:
-      changed: false
-      path: "{{ agent_claude_code_home_dir }}/skills"
     agent_claude_code_output_styles_result:
       changed: false
       path: "{{ agent_claude_code_home_dir }}/output-styles"
@@ -131,22 +122,6 @@
     path: "{{ agent_claude_code_temp_root }}"
     state: directory
     mode: "0700"
-
-- name: 检查外部 skills 目录
-  stat:
-    path: "{{ agent_claude_code_skills_src }}"
-  register: agent_claude_code_skills_src_stat
-  delegate_to: localhost
-  become: false
-  when: agent_claude_code_skills_src | length > 0
-
-- name: 校验外部 skills 目录
-  assert:
-    that:
-      - agent_claude_code_skills_src_stat.stat.exists
-      - agent_claude_code_skills_src_stat.stat.isdir
-    fail_msg: "外部 skills 目录不存在或不是目录：{{ agent_claude_code_skills_src }}"
-  when: agent_claude_code_skills_src | length > 0
 
 - name: 检查外部 output-styles 目录
   stat:

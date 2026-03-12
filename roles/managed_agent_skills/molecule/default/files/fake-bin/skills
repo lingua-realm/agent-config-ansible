@@ -1,0 +1,182 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import sys
+from pathlib import Path
+
+
+VERSION = "1.4.4-test"
+STATE_PATH = Path(os.environ.get("FAKE_SKILLS_STATE", "/tmp/fake-skills-state.json"))
+
+
+def load_state() -> dict:
+    if not STATE_PATH.exists():
+        return {"scopes": {}}
+    return json.loads(STATE_PATH.read_text(encoding="utf-8"))
+
+
+def save_state(state: dict) -> None:
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    STATE_PATH.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def parse_flag_values(args: list[str], short_flag: str, long_flag: str) -> tuple[list[str], list[str]]:
+    values: list[str] = []
+    remaining: list[str] = []
+    index = 0
+
+    while index < len(args):
+        current = args[index]
+        if current in {short_flag, long_flag}:
+            index += 1
+            while index < len(args) and not args[index].startswith("-"):
+                values.append(args[index])
+                index += 1
+            continue
+        remaining.append(current)
+        index += 1
+
+    return values, remaining
+
+
+def parse_common(args: list[str]) -> tuple[bool, list[str], list[str]]:
+    is_global = "-g" in args or "--global" in args
+    stripped = [arg for arg in args if arg not in {"-g", "--global", "-y", "--yes", "--copy", "--json"}]
+    agents, stripped = parse_flag_values(stripped, "-a", "--agent")
+    skills, stripped = parse_flag_values(stripped, "-s", "--skill")
+    return is_global, agents, skills
+
+
+def get_scope_key(is_global: bool) -> str:
+    return "global" if is_global else f"project:{os.getcwd()}"
+
+
+def ensure_scope(state: dict, scope_key: str) -> dict:
+    scopes = state.setdefault("scopes", {})
+    return scopes.setdefault(scope_key, {})
+
+
+def run_list(args: list[str]) -> int:
+    state = load_state()
+    is_global, agents, _skills = parse_common(args)
+    scope_key = get_scope_key(is_global)
+    scope_name = "global" if is_global else "project"
+    scope_data = state.get("scopes", {}).get(scope_key, {})
+
+    result = []
+    for skill_name in sorted(scope_data):
+        entry = scope_data[skill_name]
+        installed_agents = sorted(entry.get("agents", []))
+        filtered_agents = installed_agents
+
+        if agents and "*" not in agents:
+            filtered_agents = [agent for agent in installed_agents if agent in agents]
+            if not filtered_agents:
+                continue
+
+        result.append(
+            {
+                "name": skill_name,
+                "path": entry.get("path", f"/fake/{scope_name}/{skill_name}"),
+                "scope": scope_name,
+                "agents": filtered_agents,
+            }
+        )
+
+    print(json.dumps(result, indent=2))
+    return 0
+
+
+def run_add(args: list[str]) -> int:
+    if not args:
+        print("Missing required argument: source", file=sys.stderr)
+        return 1
+
+    source = args[0]
+    rest = args[1:]
+    is_global, agents, skills = parse_common(rest)
+    mode = "copy" if "--copy" in rest else "symlink"
+
+    if not Path(source).exists() and source.startswith(("/", ".")):
+        print("Local path does not exist", file=sys.stderr)
+        return 1
+
+    if not agents or not skills:
+        print("Agents and skills are required for fake add", file=sys.stderr)
+        return 1
+
+    state = load_state()
+    scope_key = get_scope_key(is_global)
+    scope_name = "global" if is_global else "project"
+    scope_data = ensure_scope(state, scope_key)
+
+    for skill_name in skills:
+        entry = scope_data.setdefault(skill_name, {})
+        current_agents = entry.get("agents", [])
+        entry["agents"] = sorted(set(current_agents).union(agents))
+        entry["mode"] = mode
+        entry["source"] = source
+        entry["path"] = f"/fake/{scope_name}/{skill_name}"
+
+    save_state(state)
+    print(f"Successfully added {len(skills)} skill(s)")
+    return 0
+
+
+def run_remove(args: list[str]) -> int:
+    is_global, agents, skills = parse_common(args)
+    if not skills:
+        print("Skills are required for fake remove", file=sys.stderr)
+        return 1
+
+    state = load_state()
+    scope_key = get_scope_key(is_global)
+    scope_data = ensure_scope(state, scope_key)
+    target_agents = None if not agents or "*" in agents else set(agents)
+    target_skills = list(scope_data.keys()) if skills == ["*"] else skills
+
+    for skill_name in target_skills:
+        if skill_name not in scope_data:
+            continue
+
+        if target_agents is None:
+          scope_data.pop(skill_name, None)
+          continue
+
+        remaining_agents = [agent for agent in scope_data[skill_name].get("agents", []) if agent not in target_agents]
+        if remaining_agents:
+            scope_data[skill_name]["agents"] = remaining_agents
+        else:
+            scope_data.pop(skill_name, None)
+
+    save_state(state)
+    print(f"Successfully removed {len(target_skills)} skill(s)")
+    return 0
+
+
+def main() -> int:
+    if len(sys.argv) == 1:
+        print("skills fake cli", file=sys.stderr)
+        return 1
+
+    if sys.argv[1] in {"--version", "version"}:
+        print(VERSION)
+        return 0
+
+    command = sys.argv[1]
+    args = sys.argv[2:]
+
+    if command in {"list", "ls"}:
+        return run_list(args)
+    if command in {"add", "a", "i", "install"}:
+        return run_add(args)
+    if command in {"remove", "rm", "r"}:
+        return run_remove(args)
+
+    print(f"Unsupported fake skills command: {command}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

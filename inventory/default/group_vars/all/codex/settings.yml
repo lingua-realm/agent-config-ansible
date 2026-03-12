@@ -1,0 +1,32 @@
+# Codex CLI 相关设置
+# 这些设置会被转换成 ~/.codex/config.toml 的内容，供 Codex CLI 使用
+# 详细配置项说明请参考官方文档：https://developers.openai.com/codex/config-reference
+
+codex_settings:
+  # ===== 部署配置 =====
+  # 是否在更新 config.toml 前要求人工确认（true/false）
+  confirm_codex_config_update: true
+
+  # 是否在更新 ~/.codex/.env 前要求人工确认（通常建议关闭，避免在 diff 中暴露敏感信息）
+  confirm_codex_env_update: false
+
+  # ===== 沙箱与审批 =====
+  # sandbox_mode: read-only / workspace-write / danger-full-access
+  sandbox_mode: "read-only"
+
+  # approval_policy: untrusted / on-failure / on-request / never
+  # approval_policy: "on-request"
+
+  # ===== 历史记录 =====
+  history:
+    persistence: "save-all"
+
+  # ===== 其他可选配置 =====
+  # instructions: "总是使用中文回答"
+  # preferred_auth_method: "apikey"
+  # disable_response_storage: true
+  # features:
+  #   personality: true
+
+# 额外写入 ~/.codex/.env 的环境变量；会和当前模型预设的 env 合并
+codex_env: {}

@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ "$1" = "--version" ]; then
+  echo "codex 0.0.0-test"
+  exit 0
+fi
+
+echo "fake codex"

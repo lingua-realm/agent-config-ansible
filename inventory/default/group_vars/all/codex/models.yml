@@ -1,0 +1,21 @@
+# Codex 模型配置
+# providers 会渲染到 config.toml 的 [model_providers.*]
+# env 会渲染到 ~/.codex/.env
+
+codex_model_configs:
+  ppio_gpt54:
+    model_provider: "ppio"
+    model: "pa/gpt-5.4"
+    model_reasoning_effort: "xhigh"
+    disable_response_storage: true
+    preferred_auth_method: "apikey"
+    providers:
+      ppio:
+        name: "PPIO (GPT-5.4)"
+        base_url: "https://api.ppio.com/openai/v1"
+        wire_api: "responses"
+        env_key: "PPIO_API_KEY"
+    env:
+      PPIO_API_KEY: "{{ secrets.api_keys.jdo_key }}"
+
+codex_use_model: "ppio_gpt54"

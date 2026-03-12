@@ -1,0 +1,90 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 1：声明式管理 Agent Skills
+      ========================================
+
+- name: 校验 managed_agent_skills 角色输入
+  assert:
+    that:
+      - managed_agent_skills_items is sequence
+      - managed_agent_skills_items is not string
+      - managed_agent_skills_cli_command | length > 0
+      - managed_agent_skills_cli_version_command | length > 0
+      - managed_agent_skills_command_env is mapping
+      - managed_agent_skills_project_dir is string
+    fail_msg: >-
+      managed_agent_skills 角色参数无效：请确保 items 为列表，cli_command / version_command 非空，
+      command_env 为对象，project_dir 为字符串。
+
+- name: 归一化 managed_agent_skills 辅助变量
+  set_fact:
+    managed_agent_skills_command_env_effective: >-
+      {{
+        managed_agent_skills_command_env
+        | combine(
+            (
+              {
+                'DISABLE_TELEMETRY': '1',
+                'DO_NOT_TRACK': '1'
+              }
+              if (managed_agent_skills_disable_telemetry | bool)
+              else {}
+            ),
+            recursive=True
+          )
+      }}
+    managed_agent_skills_cli_status: {}
+    managed_agent_skills_results: []
+  changed_when: false
+
+- name: 检查 skills CLI
+  include_role:
+    name: npm_command_bootstrap
+  vars:
+    npm_command_bootstrap_key: managed_agent_skills
+    npm_command_bootstrap_display_name: skills CLI
+    npm_command_bootstrap_command: "{{ managed_agent_skills_cli_command }}"
+    npm_command_bootstrap_version_command: "{{ managed_agent_skills_cli_version_command }}"
+    npm_command_bootstrap_auto_install_npm: >-
+      {{ managed_agent_skills_auto_install_npm if (managed_agent_skills_auto_install_npm | length > 0) else omit }}
+    npm_command_bootstrap_required: "{{ managed_agent_skills_require_cli | bool }}"
+    npm_command_bootstrap_fail_message: "未检测到可用的 skills CLI，无法继续执行声明式 skills 管理。"
+    npm_command_bootstrap_install_fail_message: "skills CLI 自动安装失败，请检查 npm 环境或手动安装。"
+  when:
+    - managed_agent_skills_items | length > 0
+    - managed_agent_skills_require_cli | bool
+
+- name: 暴露 skills CLI 状态
+  set_fact:
+    managed_agent_skills_cli_status: "{{ npm_command_bootstrap_results.managed_agent_skills | default({}) }}"
+  changed_when: false
+  when:
+    - managed_agent_skills_items | length > 0
+    - managed_agent_skills_require_cli | bool
+    - npm_command_bootstrap_results is defined
+
+- name: 应用声明式 skills 条目
+  include_tasks: process_item.yml
+  loop: "{{ managed_agent_skills_items }}"
+  loop_control:
+    loop_var: managed_agent_skills_item
+    label: >-
+      {{
+        managed_agent_skills_item.name
+        | default(
+            managed_agent_skills_item.source
+            | default((managed_agent_skills_item.skills | default([])) | join(','))
+          )
+      }}
+  when: managed_agent_skills_items | length > 0
+
+- name: 汇总 managed_agent_skills 结果
+  set_fact:
+    managed_agent_skills_result:
+      changed: "{{ (managed_agent_skills_results | selectattr('changed') | list | length) > 0 }}"
+      cli: "{{ managed_agent_skills_cli_status }}"
+      items: "{{ managed_agent_skills_results }}"
+  changed_when: false

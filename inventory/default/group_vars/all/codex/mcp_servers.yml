@@ -1,0 +1,25 @@
+# Codex CLI MCP 服务器配置
+# 渲染到 ~/.codex/config.toml 的 [mcp_servers.*] 段
+# 格式说明：
+#   stdio 类型：command + args（+ env 可选）
+#   http 类型：url（+ bearer_token_env_var / headers 可选）
+
+codex_mcp_servers:
+  context7:
+    command: "npx"
+    args: ["-y", "@upstash/context7-mcp"]
+
+  playwright:
+    command: "npx"
+    args: ["@playwright/mcp@latest"]
+
+  serena:
+    command: "uvx"
+    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+
+  fetch:
+    command: "uvx"
+    args: ["mcp-server-fetch"]
+
+  deepwiki:
+    url: "https://mcp.deepwiki.com/mcp"

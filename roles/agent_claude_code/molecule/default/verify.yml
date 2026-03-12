@@ -50,7 +50,6 @@
               command: node
               args:
                 - server.js
-        agent_claude_code_skills_src: "{{ playbook_dir }}/files/skills"
         agent_claude_code_output_styles_src: "{{ playbook_dir }}/files/output-styles"
         agent_claude_code_claude_md_src: "{{ playbook_dir }}/files/CLAUDE.md"
         agent_claude_code_verify_schema: false
@@ -75,14 +74,9 @@
         path: "{{ agent_claude_code_home_dir_test }}/output-styles/legacy.md"
       register: agent_claude_code_output_style_legacy
 
-    - name: 检查自定义 skill 已同步
+    - name: 检查现有 skill 目录保持不变
       stat:
-        path: "{{ agent_claude_code_home_dir_test }}/skills/demo-skill/SKILL.md"
-      register: agent_claude_code_skill_demo
-
-    - name: 检查陈旧 skill 已删除
-      stat:
-        path: "{{ agent_claude_code_home_dir_test }}/skills/legacy-skill"
+        path: "{{ agent_claude_code_home_dir_test }}/skills/legacy-skill/SKILL.md"
       register: agent_claude_code_skill_legacy
 
     - name: 检查 CLAUDE.md 已同步
@@ -114,8 +108,7 @@
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].env == {}
           - agent_claude_code_output_style_custom.stat.exists
           - not agent_claude_code_output_style_legacy.stat.exists
-          - agent_claude_code_skill_demo.stat.exists
-          - not agent_claude_code_skill_legacy.stat.exists
+          - agent_claude_code_skill_legacy.stat.exists
           - agent_claude_code_claude_md_final.stat.exists
           - not agent_claude_code_agents_dir.stat.exists
           - "'test-plugin@claude-plugins-official' in ((agent_claude_code_plugins_state.content | b64decode | from_json) | map(attribute='id') | list)"
