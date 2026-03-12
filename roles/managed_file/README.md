@@ -62,3 +62,4 @@ managed_file_result:
 - `json_sorted` 会先把 JSON 解析并按 key 排序后再比较，但只有检测到语义差异时才会覆盖目标文件。
 - `managed_file_template_src`、`managed_file_copy_src` 和 `managed_file_content` 必须三选一，不能同时提供多个，也不能全部省略。
 - `managed_file_confirm: true` 时会直接使用 `pause` 等待用户输入确认；如果是无人值守执行，请显式设置 `managed_file_skip_confirm: true` 或关闭确认。
+- 开启 `managed_file_confirm: true` 时，确认提示里会直接附带本次 unified diff 内容，便于在一个提示内完成确认。

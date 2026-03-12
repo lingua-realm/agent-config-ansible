@@ -258,6 +258,9 @@
           将创建新的 {{ managed_file_display_name }} 文件
           {% else %}
           上述差异将被应用
+
+          差异内容：
+          {{ managed_file_diff.stdout | trim }}
           {% endif %}
 
           备份文件：{% if managed_file_backup_path %}{{ managed_file_backup_path }}{% else %}（无需备份）{% endif %}
