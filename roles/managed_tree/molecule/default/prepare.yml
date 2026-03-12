@@ -1,0 +1,7 @@
+---
+- name: Prepare
+  hosts: all
+  tasks:
+    - name: 检查本地 rsync 可用性
+      command: rsync --version
+      changed_when: false

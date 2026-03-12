@@ -1,0 +1,39 @@
+---
+- name: Converge — 目录树同步
+  hosts: all
+  vars:
+    managed_tree_test_root: /tmp/managed-tree/default
+    managed_tree_target: "{{ managed_tree_test_root }}/target"
+  tasks:
+    - name: 准备旧目录树
+      file:
+        path: "{{ managed_tree_target }}/obsolete"
+        state: directory
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 写入陈旧文件
+      copy:
+        dest: "{{ managed_tree_target }}/obsolete.txt"
+        content: stale
+        mode: "0644"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 写入陈旧嵌套文件
+      copy:
+        dest: "{{ managed_tree_target }}/obsolete/legacy.txt"
+        content: legacy
+        mode: "0644"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行 managed_tree 角色
+      include_role:
+        name: managed_tree
+      vars:
+        managed_tree_display_name: 示例配置目录
+        managed_tree_src: "{{ playbook_dir }}/files/source_tree/"
+        managed_tree_dest: "{{ managed_tree_target }}"
+        managed_tree_delete: true

@@ -1,0 +1,36 @@
+---
+# (可选) 可读名称，用于日志输出
+managed_tree_display_name: managed tree
+
+# (必填) 控制端源目录路径
+managed_tree_src: ""
+
+# (必填) 目标端目录路径
+managed_tree_dest: ""
+
+# (可选) 是否删除目标端多余文件
+managed_tree_delete: true
+
+# (可选) 是否启用 rsync archive 模式
+managed_tree_archive: true
+
+# (可选) 是否递归同步目录
+managed_tree_recursive: true
+
+# (可选) 是否基于校验和判断变更
+managed_tree_checksum: false
+
+# (可选) 是否在传输时压缩
+managed_tree_compress: true
+
+# (可选) 是否仅同步目录本身，不递归目录内容
+managed_tree_dirs: false
+
+# (可选) 同步前确保目标目录存在时使用的权限
+managed_tree_directory_mode: "0755"
+
+# (可选) rsync 超时时间，0 表示不限制
+managed_tree_rsync_timeout: 0
+
+# (可选) 附加 rsync 选项
+managed_tree_rsync_opts: []

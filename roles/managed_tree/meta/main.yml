@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: managed_tree
+  author: lingua-realm
+  description: 以 rsync 方式将控制端目录树同步到目标端目录，支持删除多余文件与附加 rsync 选项
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: macOS
+      versions:
+        - all
+
+dependencies: []

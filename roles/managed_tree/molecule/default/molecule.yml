@@ -1,0 +1,25 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: default
+  options:
+    managed: false
+    ansible_connection_options:
+      ansible_connection: local
+platforms:
+  - name: localhost
+provisioner:
+  name: ansible
+  config_options:
+    defaults:
+      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+scenario:
+  test_sequence:
+    - dependency
+    - prepare
+    - converge
+    - idempotence
+    - verify
+verifier:
+  name: ansible

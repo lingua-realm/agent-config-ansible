@@ -1,0 +1,74 @@
+---
+- name: 校验 {{ managed_tree_display_name }} 角色输入
+  assert:
+    that:
+      - managed_tree_src | length > 0
+      - managed_tree_dest | length > 0
+      - managed_tree_src != managed_tree_dest
+      - managed_tree_rsync_timeout | int >= 0
+      - managed_tree_rsync_opts is sequence
+    fail_msg: >-
+      managed_tree 角色参数无效：必须提供 managed_tree_src 和 managed_tree_dest，
+      且两者不能相同；managed_tree_rsync_timeout 不能小于 0；
+      managed_tree_rsync_opts 必须为列表。
+
+- name: 检查控制端 {{ managed_tree_display_name }} 源目录
+  stat:
+    path: "{{ managed_tree_src }}"
+  register: managed_tree_source
+  delegate_to: localhost
+  become: false
+
+- name: 校验控制端 {{ managed_tree_display_name }} 源目录状态
+  assert:
+    that:
+      - managed_tree_source.stat.exists
+      - managed_tree_source.stat.isdir
+    fail_msg: >-
+      managed_tree 源目录不存在或不是目录：{{ managed_tree_src }}
+
+- name: 检查控制端 rsync 是否可用（{{ managed_tree_display_name }}）
+  command: rsync --version
+  register: managed_tree_controller_rsync
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: 检查目标端 rsync 是否可用（{{ managed_tree_display_name }}）
+  command: rsync --version
+  register: managed_tree_remote_rsync
+  changed_when: false
+
+- name: 确保 {{ managed_tree_display_name }} 目标目录存在
+  file:
+    path: "{{ managed_tree_dest }}"
+    state: directory
+    mode: "{{ managed_tree_directory_mode }}"
+
+- name: 同步 {{ managed_tree_display_name }} 到目标目录
+  ansible.posix.synchronize:
+    src: "{{ managed_tree_src }}"
+    dest: "{{ managed_tree_dest }}"
+    archive: "{{ managed_tree_archive }}"
+    recursive: "{{ managed_tree_recursive }}"
+    delete: "{{ managed_tree_delete }}"
+    checksum: "{{ managed_tree_checksum }}"
+    compress: "{{ managed_tree_compress }}"
+    dirs: "{{ managed_tree_dirs }}"
+    rsync_timeout: "{{ managed_tree_rsync_timeout }}"
+    rsync_opts: "{{ managed_tree_rsync_opts }}"
+  delegate_to: localhost
+  register: managed_tree_sync
+
+- name: 汇总 {{ managed_tree_display_name }} 结果
+  set_fact:
+    managed_tree_result:
+      changed: "{{ managed_tree_sync.changed | bool }}"
+      src: "{{ managed_tree_src }}"
+      dest: "{{ managed_tree_dest }}"
+      archive: "{{ managed_tree_archive | bool }}"
+      recursive: "{{ managed_tree_recursive | bool }}"
+      delete: "{{ managed_tree_delete | bool }}"
+      checksum: "{{ managed_tree_checksum | bool }}"
+      cmd: "{{ managed_tree_sync.cmd | default('') }}"
+  changed_when: false

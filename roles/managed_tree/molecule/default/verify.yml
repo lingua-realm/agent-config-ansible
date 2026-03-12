@@ -1,0 +1,46 @@
+---
+- name: Verify — 目录树同步幂等
+  hosts: all
+  vars:
+    managed_tree_test_root: /tmp/managed-tree/default
+    managed_tree_target: "{{ managed_tree_test_root }}/target"
+  tasks:
+    - name: 再次执行 managed_tree 角色
+      include_role:
+        name: managed_tree
+      vars:
+        managed_tree_display_name: 示例配置目录
+        managed_tree_src: "{{ playbook_dir }}/files/source_tree/"
+        managed_tree_dest: "{{ managed_tree_target }}"
+        managed_tree_delete: true
+
+    - name: 读取同步后的配置文件
+      slurp:
+        src: "{{ managed_tree_target }}/config/app.conf"
+      register: managed_tree_app_conf
+
+    - name: 读取同步后的脚本文件
+      slurp:
+        src: "{{ managed_tree_target }}/scripts/bootstrap.sh"
+      register: managed_tree_bootstrap
+
+    - name: 检查陈旧文件已删除
+      stat:
+        path: "{{ managed_tree_target }}/obsolete.txt"
+      register: managed_tree_obsolete_file
+
+    - name: 检查陈旧目录已删除
+      stat:
+        path: "{{ managed_tree_target }}/obsolete"
+      register: managed_tree_obsolete_dir
+
+    - name: 断言目录树场景第二次执行保持幂等
+      assert:
+        that:
+          - not (managed_tree_result.changed | bool)
+          - (managed_tree_app_conf.content | b64decode | trim) == "mode=modern\nenabled=true"
+          - (managed_tree_bootstrap.content | b64decode | trim) == "#!/bin/sh\necho bootstrap"
+          - not managed_tree_obsolete_file.stat.exists
+          - not managed_tree_obsolete_dir.stat.exists
+        fail_msg: "managed_tree 场景验证失败"
+        success_msg: "✓ managed_tree 场景通过"
