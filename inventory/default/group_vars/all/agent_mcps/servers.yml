@@ -28,7 +28,6 @@ agent_mcps:
   deepwiki:
     type: "http"
     url: "https://mcp.deepwiki.com/mcp"
-    headers: {}
 
   # playwright 浏览器自动化
   playwright:
