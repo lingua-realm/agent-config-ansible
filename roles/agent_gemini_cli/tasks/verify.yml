@@ -1,0 +1,190 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 5：验证 Gemini CLI 配置结果
+      ========================================
+
+- name: 检查 settings.json 是否存在
+  stat:
+    path: "{{ agent_gemini_cli_settings_path }}"
+  register: agent_gemini_cli_settings_stat
+  when: agent_gemini_cli_manage_settings | bool
+
+- name: 验证 settings.json 存在
+  assert:
+    that:
+      - agent_gemini_cli_settings_stat.stat.exists
+      - agent_gemini_cli_settings_stat.stat.isreg
+    fail_msg: "settings.json 不存在"
+    success_msg: "✓ settings.json 已生成"
+  when: agent_gemini_cli_manage_settings | bool
+
+- name: 解析 settings.json
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+      - "{{ agent_gemini_cli_settings_path }}"
+  register: agent_gemini_cli_settings_parse
+  changed_when: false
+  when: agent_gemini_cli_manage_settings | bool
+
+- name: 保存解析后的 settings.json
+  set_fact:
+    agent_gemini_cli_settings_data: "{{ agent_gemini_cli_settings_parse.stdout | from_json }}"
+  changed_when: false
+  when: agent_gemini_cli_manage_settings | bool
+
+- name: 验证 settings.json model.name 字段
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.model.name == agent_gemini_cli_settings_normalized.model.name
+    fail_msg: "settings.json model.name 字段不匹配"
+    success_msg: "✓ settings.json model.name 字段正确"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.model is mapping
+    - agent_gemini_cli_settings_normalized.model.name is defined
+    - agent_gemini_cli_settings_normalized.model.name | length > 0
+
+- name: 验证 general 已正确写入
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.general is defined
+      - >-
+        agent_gemini_cli_settings_data.general
+        == (
+          agent_gemini_cli_settings_data.general
+          | combine(agent_gemini_cli_settings_normalized.general, recursive=True, list_merge='replace')
+        )
+    fail_msg: "settings.json general 段未至少包含期望配置"
+    success_msg: "✓ settings.json general 段正确"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.general is mapping
+    - agent_gemini_cli_settings_normalized.general | length > 0
+
+- name: 验证 ui 已正确写入
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.ui is defined
+      - >-
+        agent_gemini_cli_settings_data.ui
+        == (
+          agent_gemini_cli_settings_data.ui
+          | combine(agent_gemini_cli_settings_normalized.ui, recursive=True, list_merge='replace')
+        )
+    fail_msg: "settings.json ui 段未至少包含期望配置"
+    success_msg: "✓ settings.json ui 段正确"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.ui is mapping
+    - agent_gemini_cli_settings_normalized.ui | length > 0
+
+- name: 验证 output 已正确写入
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.output is defined
+      - >-
+        agent_gemini_cli_settings_data.output
+        == (
+          agent_gemini_cli_settings_data.output
+          | combine(agent_gemini_cli_settings_normalized.output, recursive=True, list_merge='replace')
+        )
+    fail_msg: "settings.json output 段未至少包含期望配置"
+    success_msg: "✓ settings.json output 段正确"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.output is defined
+    - agent_gemini_cli_settings_normalized.output is mapping
+    - agent_gemini_cli_settings_normalized.output | length > 0
+
+- name: 验证 model 已正确写入
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.model is defined
+      - >-
+        agent_gemini_cli_settings_data.model
+        == (
+          agent_gemini_cli_settings_data.model
+          | combine(agent_gemini_cli_settings_normalized.model, recursive=True, list_merge='replace')
+        )
+    fail_msg: "settings.json model 段未至少包含期望配置"
+    success_msg: "✓ settings.json model 段正确"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.model is mapping
+    - agent_gemini_cli_settings_normalized.model | length > 0
+
+- name: 验证 modelConfigs 已正确写入
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.modelConfigs is defined
+      - >-
+        agent_gemini_cli_settings_data.modelConfigs
+        == (
+          agent_gemini_cli_settings_data.modelConfigs
+          | combine(agent_gemini_cli_settings_normalized.modelConfigs, recursive=True, list_merge='replace')
+        )
+    fail_msg: "settings.json modelConfigs 段未至少包含期望配置"
+    success_msg: "✓ settings.json modelConfigs 段正确"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.modelConfigs is mapping
+    - agent_gemini_cli_settings_normalized.modelConfigs | length > 0
+
+- name: 验证 mcpServers 已正确写入
+  assert:
+    that:
+      - agent_gemini_cli_settings_data.mcpServers[item.key] is defined
+      - agent_gemini_cli_settings_data.mcpServers[item.key] is mapping
+      - agent_gemini_cli_settings_data.mcpServers[item.key].startupTimeoutSec is not defined
+      - >-
+        agent_gemini_cli_settings_data.mcpServers[item.key]
+        == (
+          agent_gemini_cli_settings_data.mcpServers[item.key]
+          | combine(item.value, recursive=True, list_merge='replace')
+        )
+    fail_msg: >-
+      settings.json 中的 MCP Server {{ item.key }} 未至少包含期望配置，
+      或包含 Gemini CLI 不支持的字段。
+    success_msg: "✓ MCP Server {{ item.key }} 至少包含期望配置"
+  loop: "{{ agent_gemini_cli_settings_normalized.mcpServers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_settings_normalized.mcpServers | length > 0
+
+- name: 检查 .env 是否存在
+  stat:
+    path: "{{ agent_gemini_cli_env_path }}"
+  register: agent_gemini_cli_env_stat
+  when: agent_gemini_cli_should_manage_env | bool
+
+- name: 验证 .env 已同步
+  assert:
+    that:
+      - agent_gemini_cli_env_stat.stat.exists
+      - agent_gemini_cli_env_stat.stat.isreg
+    fail_msg: ".env 未同步成功"
+    success_msg: "✓ .env 已同步"
+  when: agent_gemini_cli_should_manage_env | bool
+
+- name: 检查 GEMINI.md 是否存在
+  stat:
+    path: "{{ agent_gemini_cli_gemini_md_path }}"
+  register: agent_gemini_cli_gemini_md_stat
+  when: agent_gemini_cli_should_manage_gemini_md | bool
+
+- name: 验证 GEMINI.md 已同步
+  assert:
+    that:
+      - agent_gemini_cli_gemini_md_stat.stat.exists
+      - agent_gemini_cli_gemini_md_stat.stat.isreg
+    fail_msg: "GEMINI.md 未同步成功"
+    success_msg: "✓ GEMINI.md 已同步"
+  when: agent_gemini_cli_should_manage_gemini_md | bool

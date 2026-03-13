@@ -1,0 +1,73 @@
+---
+# Gemini CLI 配置根目录
+agent_gemini_cli_home_dir: "{{ lookup('env', 'HOME') }}/.gemini"
+
+# Gemini CLI 核心文件路径
+agent_gemini_cli_settings_path: "{{ agent_gemini_cli_home_dir }}/settings.json"
+agent_gemini_cli_env_path: "{{ agent_gemini_cli_home_dir }}/.env"
+agent_gemini_cli_gemini_md_path: "{{ lookup('env', 'HOME') }}/GEMINI.md"
+
+# 角色工作临时目录
+agent_gemini_cli_temp_root: /tmp/agent-gemini-cli
+
+# 是否要求 Gemini CLI 可用
+agent_gemini_cli_require_gemini_cli: true
+
+# Gemini CLI 不可用时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+agent_gemini_cli_gemini_auto_install_npm: "@google/gemini-cli"
+
+# 是否管理 settings.json / .env / GEMINI.md 以及执行最终验证
+agent_gemini_cli_manage_settings: true
+agent_gemini_cli_manage_env: true
+agent_gemini_cli_manage_gemini_md: true
+agent_gemini_cli_run_verify: true
+
+# 是否在变更 settings.json / .env 时交互确认
+agent_gemini_cli_confirm_settings_update: false
+agent_gemini_cli_confirm_env_update: false
+
+# 是否为 settings.json / .env / GEMINI.md 创建备份
+agent_gemini_cli_backup: true
+
+# 统一备份根目录；为空时回退到各托管文件默认的就地备份目录
+agent_gemini_cli_backup_root: ""
+
+# settings.json 备份目录与前缀
+agent_gemini_cli_settings_backup_dir: >-
+  {{
+    ((agent_gemini_cli_backup_root | regex_replace('/+$', '')) ~ '/settings')
+    if (agent_gemini_cli_backup_root | length > 0)
+    else ((agent_gemini_cli_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_gemini_cli_settings_backup_prefix: settings.json
+
+# .env 备份目录与前缀
+agent_gemini_cli_env_backup_dir: >-
+  {{
+    ((agent_gemini_cli_backup_root | regex_replace('/+$', '')) ~ '/env')
+    if (agent_gemini_cli_backup_root | length > 0)
+    else ((agent_gemini_cli_home_dir | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_gemini_cli_env_backup_prefix: gemini.env
+
+# GEMINI.md 备份目录与前缀
+agent_gemini_cli_gemini_md_backup_dir: >-
+  {{
+    ((agent_gemini_cli_backup_root | regex_replace('/+$', '')) ~ '/gemini-md')
+    if (agent_gemini_cli_backup_root | length > 0)
+    else (((agent_gemini_cli_gemini_md_path | dirname) | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_gemini_cli_gemini_md_backup_prefix: GEMINI.md
+
+# 生成 settings.json 的对象
+agent_gemini_cli_settings:
+  general: {}
+  model: {}
+  modelConfigs: {}
+  mcpServers: {}
+
+# 渲染到 ~/.gemini/.env 的环境变量
+agent_gemini_cli_env: {}
+
+# 可选外部资源路径；为空时不管理
+agent_gemini_cli_gemini_md_src: ""

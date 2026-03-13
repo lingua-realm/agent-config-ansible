@@ -1,0 +1,27 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 4：同步可选资源
+      ========================================
+
+- name: 同步 GEMINI.md
+  include_role:
+    name: managed_file
+  vars:
+    managed_file_display_name: GEMINI.md
+    managed_file_dest: "{{ agent_gemini_cli_gemini_md_path }}"
+    managed_file_temp_path: "{{ agent_gemini_cli_temp_root }}/GEMINI.md.rendered"
+    managed_file_copy_src: "{{ agent_gemini_cli_gemini_md_src }}"
+    managed_file_mode: "0644"
+    managed_file_compare_kind: plain
+    managed_file_confirm: false
+    managed_file_backup: "{{ agent_gemini_cli_backup }}"
+    managed_file_backup_dir: "{{ agent_gemini_cli_gemini_md_backup_dir }}"
+    managed_file_backup_prefix: "{{ agent_gemini_cli_gemini_md_backup_prefix }}"
+
+- name: 记录 GEMINI.md 同步结果
+  set_fact:
+    agent_gemini_cli_gemini_md_result: "{{ managed_file_result }}"
+  changed_when: false

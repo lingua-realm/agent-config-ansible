@@ -1,0 +1,34 @@
+---
+- name: Gemini CLI 自动化配置入口
+  include_tasks: validate.yml
+
+- name: Gemini settings.json 阶段
+  include_tasks: sync_settings.yml
+  when: agent_gemini_cli_manage_settings | bool
+
+- name: Gemini .env 阶段
+  include_tasks: sync_env.yml
+  when: agent_gemini_cli_should_manage_env | bool
+
+- name: Gemini 资源同步阶段
+  include_tasks: sync_assets.yml
+  when: agent_gemini_cli_should_manage_gemini_md | bool
+
+- name: Gemini 验证阶段
+  include_tasks: verify.yml
+  when: agent_gemini_cli_run_verify | bool
+
+- name: 汇总 Gemini CLI 自动化配置结果
+  set_fact:
+    agent_gemini_cli_result:
+      changed: >-
+        {{
+          (agent_gemini_cli_settings_result.changed | bool)
+          or (agent_gemini_cli_env_result.changed | bool)
+          or (agent_gemini_cli_gemini_md_result.changed | bool)
+        }}
+      gemini_cli: "{{ agent_gemini_cli_gemini_status }}"
+      settings: "{{ agent_gemini_cli_settings_result }}"
+      env: "{{ agent_gemini_cli_env_result }}"
+      gemini_md: "{{ agent_gemini_cli_gemini_md_result }}"
+  changed_when: false
