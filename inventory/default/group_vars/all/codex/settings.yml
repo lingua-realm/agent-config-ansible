@@ -27,6 +27,16 @@ codex_settings:
   # disable_response_storage: true
   # features:
   #   personality: true
+  tui:
+    status_line:
+      - model-with-reasoning
+      - context-remaining
+      - current-dir
+      - git-branch
+      - context-used
+      - context-window-size
+      - total-input-tokens
+      - total-output-tokens
 
 # 额外写入 ~/.codex/.env 的环境变量；会和当前模型预设的 env 合并
 codex_env: {}
