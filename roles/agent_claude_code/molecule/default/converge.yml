@@ -2,7 +2,8 @@
 - name: Converge — Claude Code 自动化配置
   hosts: all
   environment:
-    PATH: "{{ agent_claude_code_fake_bin }}:{{ ansible_env.PATH }}"
+    HOME: "{{ agent_claude_code_test_root }}/home"
+    PATH: "{{ agent_claude_code_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     FAKE_CLAUDE_STATE_DIR: "{{ agent_claude_code_test_root }}/state"
   vars:
     agent_claude_code_test_root: /tmp/agent-claude-code/default

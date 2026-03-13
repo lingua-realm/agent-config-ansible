@@ -199,6 +199,8 @@
         agent_claude_code_user_json_path: "{{ claude_code_user_json_path | default(lookup('env', 'HOME') ~ '/.claude.json') }}"
         agent_claude_code_temp_root: "{{ claude_code_temp_root | default('/tmp/agent-claude-code') }}"
         agent_claude_code_require_claude_cli: "{{ claude_code_require_claude_cli | default(true) | bool }}"
+        agent_claude_code_claude_auto_install: "{{ claude_code_claude_auto_install | default(true) | bool }}"
+        agent_claude_code_claude_install_command: "{{ claude_code_claude_install_command | default('curl -fsSL https://claude.ai/install.sh | bash') }}"
         agent_claude_code_require_ccline: "{{ claude_code_require_ccline | default(true) | bool }}"
         agent_claude_code_ccline_auto_install_npm: "{{ claude_code_ccline_auto_install_npm | default('@cometix/ccline') }}"
         agent_claude_code_manage_plugins: "{{ claude_code_manage_plugins | default(true) | bool }}"

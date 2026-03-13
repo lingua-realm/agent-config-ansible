@@ -2,7 +2,7 @@
 
 复用仓库现有基础 role，为 Claude Code 执行一套完整的自动化配置流程：
 
-- 检查 Claude CLI 与可选的 `ccline`
+- 检查 Claude CLI 与可选的 `ccline`，支持 Claude CLI 缺失时自动安装
 - 管理插件 marketplace 与插件安装
 - deep merge `~/.claude.json`
 - 生成并同步 `~/.claude/settings.json`
@@ -27,6 +27,8 @@
 | `agent_claude_code_user_json_path` | ❌ | `~/.claude.json` | 用户级 claude.json 路径 |
 | `agent_claude_code_temp_root` | ❌ | `/tmp/agent-claude-code` | role 工作临时目录 |
 | `agent_claude_code_require_claude_cli` | ❌ | `true` | 是否要求 Claude CLI 可用 |
+| `agent_claude_code_claude_auto_install` | ❌ | `true` | Claude CLI 不可用时是否自动安装；设为 `false` 则在未找到时直接报错 |
+| `agent_claude_code_claude_install_command` | ❌ | `curl -fsSL https://claude.ai/install.sh \| bash` | Claude CLI 自动安装命令；安装失败或安装后仍不可用时 role 会显式报错 |
 | `agent_claude_code_require_ccline` | ❌ | `true` | 当 statusLine 使用 ccline 时是否要求 ccline 可用 |
 | `agent_claude_code_ccline_auto_install_npm` | ❌ | `@cometix/ccline` | ccline 自动安装时使用的 npm 包名 |
 | `agent_claude_code_manage_plugins` | ❌ | `true` | 是否管理插件 marketplace 与插件安装 |

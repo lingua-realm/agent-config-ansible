@@ -11,6 +11,12 @@ agent_claude_code_temp_root: /tmp/agent-claude-code
 # 是否要求 Claude CLI 可用
 agent_claude_code_require_claude_cli: true
 
+# Claude CLI 不可用时是否自动安装；true 时执行 agent_claude_code_claude_install_command
+agent_claude_code_claude_auto_install: true
+
+# Claude CLI 自动安装命令；安装失败或安装后仍不可用时 role 会显式报错
+agent_claude_code_claude_install_command: "curl -fsSL https://claude.ai/install.sh | bash"
+
 # 当 statusLine 使用 ccline 时，是否要求 ccline 可用
 agent_claude_code_require_ccline: true
 

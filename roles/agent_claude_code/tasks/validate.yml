@@ -155,25 +155,101 @@
     fail_msg: "外部 CLAUDE.md 文件不存在或不是普通文件：{{ agent_claude_code_claude_md_src }}"
   when: agent_claude_code_claude_md_src | length > 0
 
-- name: 检查 Claude CLI
-  include_role:
-    name: npm_command_bootstrap
-  vars:
-    npm_command_bootstrap_key: claude
-    npm_command_bootstrap_display_name: Claude CLI
-    npm_command_bootstrap_command: claude
-    npm_command_bootstrap_version_command: claude --version
-    npm_command_bootstrap_required: "{{ (agent_claude_code_require_claude_cli | bool) or (agent_claude_code_manage_plugins | bool) }}"
-    npm_command_bootstrap_fail_message: >-
-      未检测到可用的 Claude CLI，无法继续执行 Claude Code 配置。
+- name: 检查 Claude CLI 是否在 PATH 中
+  shell: 'export PATH="$PATH:$HOME/.local/bin"; command -v claude'
+  register: _accc_claude_path_check
+  changed_when: false
+  failed_when: false
+  when: agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+
+- name: 自动安装 Claude CLI
+  shell: "{{ agent_claude_code_claude_install_command }}"
+  args:
+    executable: /bin/bash
+  register: _accc_claude_install
+  changed_when: (_accc_claude_install.rc | default(1)) == 0
+  failed_when: false
   when:
     - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(0)) != 0
+    - agent_claude_code_claude_auto_install | bool
+
+- name: 校验 Claude CLI 自动安装失败
+  fail:
+    msg: >-
+      Claude CLI 自动安装失败，请检查安装脚本输出或手动安装。
+      安装命令：{{ agent_claude_code_claude_install_command }}
+      stdout={{ _accc_claude_install.stdout | default('') }}
+      stderr={{ _accc_claude_install.stderr | default('') }}
+  when:
+    - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(0)) != 0
+    - agent_claude_code_claude_auto_install | bool
+    - (_accc_claude_install.rc | default(1)) != 0
+
+- name: 重新检查 Claude CLI（自动安装后）
+  shell: 'export PATH="$PATH:$HOME/.local/bin"; command -v claude'
+  register: _accc_claude_path_after
+  changed_when: false
+  failed_when: false
+  when:
+    - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(0)) != 0
+    - agent_claude_code_claude_auto_install | bool
+    - (_accc_claude_install.rc | default(1)) == 0
+
+- name: 校验 Claude CLI 自动安装后仍不可用
+  fail:
+    msg: >-
+      Claude CLI 自动安装后仍未在 PATH 中检测到，请检查安装脚本输出或手动安装。
+      安装命令：{{ agent_claude_code_claude_install_command }}
+  when:
+    - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(0)) != 0
+    - agent_claude_code_claude_auto_install | bool
+    - (_accc_claude_install.rc | default(1)) == 0
+    - (_accc_claude_path_after.rc | default(1)) != 0
+
+- name: 校验 Claude CLI 不可用（未启用自动安装）
+  fail:
+    msg: >-
+      未检测到可用的 Claude CLI，无法继续执行 Claude Code 配置。
+      如需自动安装，请设置 agent_claude_code_claude_auto_install: true。
+  when:
+    - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(0)) != 0
+    - not (agent_claude_code_claude_auto_install | bool)
+
+- name: 获取 Claude CLI 版本
+  shell: 'export PATH="$PATH:$HOME/.local/bin"; claude --version'
+  register: _accc_claude_version
+  changed_when: false
+  failed_when: false
+  when:
+    - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(1)) == 0
+      or (_accc_claude_path_after.rc | default(1)) == 0
 
 - name: 暴露 Claude CLI 状态
   set_fact:
-    agent_claude_code_claude_cli_status: "{{ npm_command_bootstrap_results.claude | default({}) }}"
+    agent_claude_code_claude_cli_status: >-
+      {{
+        {
+          'available': true,
+          'path': (
+            _accc_claude_path_check.stdout
+            if (_accc_claude_path_check.rc | default(1)) == 0
+            else (_accc_claude_path_after.stdout | default(''))
+          ),
+          'version': _accc_claude_version.stdout | default(''),
+          'installed_now': (_accc_claude_path_check.rc | default(0)) != 0
+        }
+      }}
   changed_when: false
-  when: npm_command_bootstrap_results is defined
+  when:
+    - agent_claude_code_require_claude_cli | bool or agent_claude_code_manage_plugins | bool
+    - (_accc_claude_path_check.rc | default(1)) == 0
+      or (_accc_claude_path_after.rc | default(1)) == 0
 
 - name: 检查 ccline
   include_role:

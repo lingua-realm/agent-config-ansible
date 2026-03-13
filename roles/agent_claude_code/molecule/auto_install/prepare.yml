@@ -1,0 +1,15 @@
+---
+- name: Prepare
+  hosts: all
+  tasks:
+    - name: 检查 tar 可用性
+      command: tar --version
+      changed_when: false
+
+    - name: 检查 python3 可用性
+      command: python3 --version
+      changed_when: false
+
+    - name: 检查 diff 可用性
+      command: diff --version
+      changed_when: false

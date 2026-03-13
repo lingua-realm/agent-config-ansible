@@ -1,0 +1,43 @@
+---
+- name: Verify — Claude CLI 自动安装幂等性
+  hosts: all
+  environment:
+    HOME: "{{ agent_claude_code_test_root }}/home"
+    PATH: "{{ agent_claude_code_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    agent_claude_code_test_root: /tmp/agent-claude-code/auto-install
+    agent_claude_code_fake_bin: "{{ agent_claude_code_test_root }}/fake-bin"
+    agent_claude_code_home_dir_test: "{{ agent_claude_code_test_root }}/home/.claude"
+    agent_claude_code_user_json_path_test: "{{ agent_claude_code_test_root }}/home/.claude.json"
+  tasks:
+    - name: 再次执行 agent_claude_code 角色
+      include_role:
+        name: agent_claude_code
+      vars:
+        agent_claude_code_home_dir: "{{ agent_claude_code_home_dir_test }}"
+        agent_claude_code_user_json_path: "{{ agent_claude_code_user_json_path_test }}"
+        agent_claude_code_temp_root: "{{ agent_claude_code_test_root }}/tmp"
+        agent_claude_code_require_claude_cli: true
+        agent_claude_code_claude_auto_install: true
+        agent_claude_code_claude_install_command: "{{ agent_claude_code_fake_bin }}/install-claude.sh"
+        agent_claude_code_require_ccline: false
+        agent_claude_code_manage_plugins: false
+        agent_claude_code_manage_user_json: false
+        agent_claude_code_manage_settings: false
+        agent_claude_code_run_verify: false
+        agent_claude_code_settings:
+          env: {}
+          model: claude-sonnet-4-5
+          outputStyle: auto-install-test
+          statusLine:
+            type: none
+
+    - name: 断言第二次执行不重复安装 Claude CLI
+      assert:
+        that:
+          - agent_claude_code_claude_cli_status.available | bool
+          - agent_claude_code_claude_cli_status.path == agent_claude_code_fake_bin ~ '/claude'
+          - agent_claude_code_claude_cli_status.version == 'claude 9.9.9'
+          - not (agent_claude_code_claude_cli_status.installed_now | bool)
+        fail_msg: "Claude CLI 自动安装幂等性验证失败：{{ agent_claude_code_claude_cli_status }}"
+        success_msg: "✓ Claude CLI 自动安装幂等性验证通过"
