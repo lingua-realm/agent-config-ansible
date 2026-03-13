@@ -1,0 +1,133 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+  syntax-check:
+    name: Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install project dependencies
+        run: uv sync --dev
+
+      - name: Syntax check all playbooks
+        run: |
+          uv run ansible-playbook --syntax-check playbooks/setup_claude_code.yml
+          uv run ansible-playbook --syntax-check playbooks/setup_codex.yml
+          uv run ansible-playbook --syntax-check playbooks/setup_gemini_cli.yml
+          uv run ansible-playbook --syntax-check playbooks/setup_copilot_cli.yml
+          uv run ansible-playbook --syntax-check playbooks/setup_agent_skills.yml
+
+  setup-tools:
+    name: "Setup ${{ matrix.tool }}"
+    runs-on: ubuntu-latest
+    needs: syntax-check
+    strategy:
+      fail-fast: false
+      matrix:
+        tool:
+          - claude_code
+          - codex
+          - gemini_cli
+          - copilot_cli
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "lts/*"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install project dependencies
+        run: uv sync --dev
+
+      - name: Resolve playbook path
+        id: resolve
+        run: |
+          case "${{ matrix.tool }}" in
+            claude_code)  echo "playbook=playbooks/setup_claude_code.yml"  >> "$GITHUB_OUTPUT" ;;
+            codex)        echo "playbook=playbooks/setup_codex.yml"         >> "$GITHUB_OUTPUT" ;;
+            gemini_cli)   echo "playbook=playbooks/setup_gemini_cli.yml"    >> "$GITHUB_OUTPUT" ;;
+            copilot_cli)  echo "playbook=playbooks/setup_copilot_cli.yml"   >> "$GITHUB_OUTPUT" ;;
+          esac
+
+      - name: Write extra-vars file
+        env:
+          VOLCES_API_KEY: ${{ secrets.VOLCES_API_KEY }}
+          PPIO_API_KEY: ${{ secrets.PPIO_API_KEY }}
+        run: |
+          uv run python - <<'PY'
+          import os
+          from pathlib import Path
+          import yaml
+
+          repo_root = Path.cwd()
+
+          def load_yaml(relative_path):
+              return yaml.safe_load((repo_root / relative_path).read_text(encoding="utf-8"))
+
+          claude_settings = load_yaml("inventory/default/group_vars/all/claude_code/settings.yml")["claude_code_settings"]
+          claude_settings["confirm_settings_update"] = False
+
+          claude_user_json = load_yaml("inventory/default/group_vars/all/claude_code/mcp_servers.yml")[
+              "claude_code_dot_claude_json_merge"
+          ]
+          claude_user_json["confirm_claude_json_update"] = False
+
+          codex_settings = load_yaml("inventory/default/group_vars/all/codex/settings.yml")["codex_settings"]
+          codex_settings["confirm_codex_config_update"] = False
+          codex_settings["confirm_codex_env_update"] = False
+
+          gemini_confirm_settings_update = False
+          gemini_confirm_env_update = False
+
+          extra_vars = {
+              "claude_code_settings": claude_settings,
+              "claude_code_dot_claude_json_merge": claude_user_json,
+              "copilot_cli_confirm_mcp_config_update": False,
+              "codex_settings": codex_settings,
+              "gemini_confirm_settings_update": gemini_confirm_settings_update,
+              "gemini_confirm_env_update": gemini_confirm_env_update,
+          }
+
+          secrets = {}
+          if os.environ.get("VOLCES_API_KEY"):
+              secrets["volces"] = os.environ["VOLCES_API_KEY"]
+          if os.environ.get("PPIO_API_KEY"):
+              secrets["ppio"] = os.environ["PPIO_API_KEY"]
+          if secrets:
+              extra_vars["secrets"] = {"api_keys": secrets}
+
+          output = Path(os.environ["RUNNER_TEMP"]) / "ansible-extra-vars.yml"
+          output.write_text(yaml.safe_dump(extra_vars, sort_keys=False), encoding="utf-8")
+          PY
+
+      - name: Run tool playbook
+        run: |
+          PLAYBOOK="${{ steps.resolve.outputs.playbook }}"
+          uv run ansible-playbook "$PLAYBOOK" -e @"$RUNNER_TEMP/ansible-extra-vars.yml"
+
+      - name: Run agent skills playbook
+        run: |
+          uv run ansible-playbook playbooks/setup_agent_skills.yml -e @"$RUNNER_TEMP/ansible-extra-vars.yml"
