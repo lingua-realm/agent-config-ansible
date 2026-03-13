@@ -37,6 +37,8 @@
         agent_gemini_cli_home_dir: "{{ agent_gemini_cli_home_dir_test }}"
         agent_gemini_cli_gemini_md_path: "{{ agent_gemini_cli_gemini_md_test }}"
         agent_gemini_cli_temp_root: "{{ agent_gemini_cli_test_root }}/tmp"
+        agent_gemini_cli_verify_schema: true
+        agent_gemini_cli_settings_schemafile: "{{ playbook_dir }}/files/settings.schema.json"
         agent_gemini_cli_settings:
           general:
             preferredEditor: vim

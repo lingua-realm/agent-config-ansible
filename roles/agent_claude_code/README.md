@@ -10,6 +10,8 @@
 
 这个 role 不再内置 `agents`、`output-styles` 目录内容；其中 `output-styles` 需要通过外部路径传入，`skills` 建议改由 `managed_agent_skills` role 统一管理，`agents` 目录完全不管理。
 
+当 `agent_claude_code_verify_schema: true` 时，Schema 校验在控制端执行，因此控制端需要可用的 `check-jsonschema`，并且 `agent_claude_code_settings_schemafile` 指向的 schema 在控制端可访问。
+
 ## 依赖的基础 role
 
 - `npm_command_bootstrap`
@@ -31,7 +33,8 @@
 | `agent_claude_code_manage_user_json` | ❌ | `true` | 是否管理 `~/.claude.json` |
 | `agent_claude_code_manage_settings` | ❌ | `true` | 是否管理 `settings.json` |
 | `agent_claude_code_run_verify` | ❌ | `true` | role 末尾是否执行验证任务 |
-| `agent_claude_code_verify_schema` | ❌ | `false` | 是否执行 `settings.json` Schema 校验 |
+| `agent_claude_code_verify_schema` | ❌ | `false` | 是否在控制端执行 `settings.json` JSON Schema 校验；失败会终止 role |
+| `agent_claude_code_settings_schemafile` | ❌ | Claude 官方 schema URL | `check-jsonschema --schemafile` 使用的 schema 来源；支持本地文件路径或 URL |
 | `agent_claude_code_confirm_settings_update` | ❌ | `false` | settings.json 变更时是否交互确认 |
 | `agent_claude_code_confirm_user_json_update` | ❌ | `false` | `~/.claude.json` 变更时是否交互确认 |
 | `agent_claude_code_backup` | ❌ | `true` | 是否为托管文件创建备份 |

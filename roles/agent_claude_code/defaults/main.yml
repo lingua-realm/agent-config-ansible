@@ -26,6 +26,9 @@ agent_claude_code_run_verify: true
 # 是否在 verify 阶段执行 settings.json Schema 校验
 agent_claude_code_verify_schema: false
 
+# settings.json Schema 来源；支持本地文件路径或 URL
+agent_claude_code_settings_schemafile: "https://json.schemastore.org/claude-code-settings.json"
+
 # 是否在变更 settings.json / ~/.claude.json 时交互确认
 agent_claude_code_confirm_settings_update: false
 agent_claude_code_confirm_user_json_update: false

@@ -159,6 +159,56 @@
     - agent_gemini_cli_manage_settings | bool
     - agent_gemini_cli_settings_normalized.mcpServers | length > 0
 
+- name: 执行 Gemini settings.json Schema 校验
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_verify_schema | bool
+  block:
+    - name: 在控制端创建 Gemini settings.json Schema 校验临时文件
+      tempfile:
+        state: file
+        suffix: .json
+      register: agent_gemini_cli_settings_schema_temp
+      delegate_to: localhost
+      become: false
+
+    - name: 写入 Gemini settings.json 到控制端临时文件
+      copy:
+        dest: "{{ agent_gemini_cli_settings_schema_temp.path }}"
+        content: "{{ agent_gemini_cli_settings_parse.stdout }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    - name: 校验 Gemini settings.json Schema
+      command:
+        argv:
+          - check-jsonschema
+          - --schemafile
+          - "{{ agent_gemini_cli_settings_schemafile }}"
+          - "{{ agent_gemini_cli_settings_schema_temp.path }}"
+      register: agent_gemini_cli_schema_validation
+      changed_when: false
+      delegate_to: localhost
+      become: false
+  always:
+    - name: 清理 Gemini settings.json Schema 校验临时文件
+      file:
+        path: "{{ agent_gemini_cli_settings_schema_temp.path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      when:
+        - agent_gemini_cli_settings_schema_temp is defined
+        - agent_gemini_cli_settings_schema_temp.path is defined
+
+- name: 显示 Gemini settings.json Schema 校验结果
+  debug:
+    msg: "✓ settings.json 通过 JSON Schema 校验"
+  when:
+    - agent_gemini_cli_manage_settings | bool
+    - agent_gemini_cli_verify_schema | bool
+
 - name: 检查 .env 是否存在
   stat:
     path: "{{ agent_gemini_cli_env_path }}"

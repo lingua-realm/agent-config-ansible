@@ -286,6 +286,8 @@
         agent_gemini_cli_manage_env: "{{ gemini_manage_env | default(gemini_env_effective | length > 0) | bool }}"
         agent_gemini_cli_manage_gemini_md: "{{ gemini_manage_gemini_md | default(true) | bool }}"
         agent_gemini_cli_run_verify: "{{ gemini_run_verify | default(true) | bool }}"
+        agent_gemini_cli_verify_schema: "{{ gemini_verify_schema | default(false) | bool }}"
+        agent_gemini_cli_settings_schemafile: "{{ gemini_settings_schemafile | default('https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json') }}"
         agent_gemini_cli_confirm_settings_update: "{{ gemini_confirm_settings_update | default(false) | bool }}"
         agent_gemini_cli_confirm_env_update: "{{ gemini_confirm_env_update | default(false) | bool }}"
         agent_gemini_cli_backup: "{{ gemini_backup | default(true) | bool }}"

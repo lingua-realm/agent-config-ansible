@@ -22,6 +22,12 @@ agent_gemini_cli_manage_env: true
 agent_gemini_cli_manage_gemini_md: true
 agent_gemini_cli_run_verify: true
 
+# 是否在 verify 阶段执行 settings.json Schema 校验
+agent_gemini_cli_verify_schema: false
+
+# settings.json Schema 来源；支持本地文件路径或 URL
+agent_gemini_cli_settings_schemafile: "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json"
+
 # 是否在变更 settings.json / .env 时交互确认
 agent_gemini_cli_confirm_settings_update: false
 agent_gemini_cli_confirm_env_update: false

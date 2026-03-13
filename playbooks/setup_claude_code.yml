@@ -206,6 +206,7 @@
         agent_claude_code_manage_settings: "{{ claude_code_manage_settings | default(true) | bool }}"
         agent_claude_code_run_verify: "{{ claude_code_run_verify | default(true) | bool }}"
         agent_claude_code_verify_schema: "{{ claude_code_verify_schema | default(false) | bool }}"
+        agent_claude_code_settings_schemafile: "{{ claude_code_settings_schemafile | default('https://json.schemastore.org/claude-code-settings.json') }}"
         agent_claude_code_confirm_settings_update: "{{ claude_code_settings.confirm_settings_update | default(false) | bool }}"
         agent_claude_code_confirm_user_json_update: "{{ claude_code_dot_claude_json_merge.confirm_claude_json_update | default(false) | bool }}"
         agent_claude_code_backup: "{{ claude_code_backup | default(true) | bool }}"

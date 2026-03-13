@@ -27,6 +27,8 @@
 | `agent_gemini_cli_manage_env` | ❌ | `true` | 是否管理 `.env`；当 `agent_gemini_cli_env` 为空时会自动跳过 |
 | `agent_gemini_cli_manage_gemini_md` | ❌ | `true` | 是否管理 `GEMINI.md`；当 `agent_gemini_cli_gemini_md_src` 为空时会自动跳过 |
 | `agent_gemini_cli_run_verify` | ❌ | `true` | role 末尾是否执行验证任务 |
+| `agent_gemini_cli_verify_schema` | ❌ | `false` | 是否在控制端执行 `settings.json` JSON Schema 校验；失败会终止 role |
+| `agent_gemini_cli_settings_schemafile` | ❌ | Gemini 官方 schema URL | `check-jsonschema --schemafile` 使用的 schema 来源；支持本地文件路径或 URL |
 | `agent_gemini_cli_confirm_settings_update` | ❌ | `false` | settings.json 变更时是否交互确认 |
 | `agent_gemini_cli_confirm_env_update` | ❌ | `false` | `.env` 变更时是否交互确认 |
 | `agent_gemini_cli_backup` | ❌ | `true` | 是否为托管文件创建备份 |
@@ -116,3 +118,4 @@ agent_gemini_cli_result:
 - `agent_gemini_cli_manage_env: true` 且 `agent_gemini_cli_env` 为空时，会自动跳过 `.env` 同步，不会生成空文件。
 - `agent_gemini_cli_confirm_settings_update` 和 `agent_gemini_cli_confirm_env_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
 - 设置 `agent_gemini_cli_backup_root` 后，`settings.json`、`.env` 和 `GEMINI.md` 的备份会分别写入其下的 `settings/`、`env/`、`gemini-md/` 子目录。
+- `agent_gemini_cli_verify_schema: true` 时，Schema 校验在控制端执行，因此控制端需要可用的 `check-jsonschema`，并且 `agent_gemini_cli_settings_schemafile` 指向的 schema 在控制端可访问。

@@ -52,7 +52,8 @@
                 - server.js
         agent_claude_code_output_styles_src: "{{ playbook_dir }}/files/output-styles"
         agent_claude_code_claude_md_src: "{{ playbook_dir }}/files/CLAUDE.md"
-        agent_claude_code_verify_schema: false
+        agent_claude_code_verify_schema: true
+        agent_claude_code_settings_schemafile: "{{ playbook_dir }}/files/settings.schema.json"
 
     - name: 读取 settings.json
       slurp:

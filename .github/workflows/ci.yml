@@ -99,16 +99,20 @@ jobs:
           codex_settings["confirm_codex_config_update"] = False
           codex_settings["confirm_codex_env_update"] = False
 
+          claude_code_verify_schema = True
           gemini_confirm_settings_update = False
           gemini_confirm_env_update = False
+          gemini_verify_schema = True
 
           extra_vars = {
               "claude_code_settings": claude_settings,
               "claude_code_dot_claude_json_merge": claude_user_json,
+              "claude_code_verify_schema": claude_code_verify_schema,
               "copilot_cli_confirm_mcp_config_update": False,
               "codex_settings": codex_settings,
               "gemini_confirm_settings_update": gemini_confirm_settings_update,
               "gemini_confirm_env_update": gemini_confirm_env_update,
+              "gemini_verify_schema": gemini_verify_schema,
           }
 
           secrets = {}

@@ -195,28 +195,52 @@
     - agent_claude_code_manage_plugins | bool
     - agent_claude_code_effective_plugins_to_install | length > 0
 
-- name: 执行 settings.json Schema 校验
-  command:
-    argv:
-      - check-jsonschema
-      - --schemafile
-      - https://json.schemastore.org/claude-code-settings.json
-      - "{{ agent_claude_code_home_dir }}/settings.json"
-  register: agent_claude_code_schema_validation
-  changed_when: false
-  failed_when: false
+- name: 执行 Claude settings.json Schema 校验
   when:
     - agent_claude_code_manage_settings | bool
     - agent_claude_code_verify_schema | bool
+  block:
+    - name: 在控制端创建 Claude settings.json Schema 校验临时文件
+      tempfile:
+        state: file
+        suffix: .json
+      register: agent_claude_code_settings_schema_temp
+      delegate_to: localhost
+      become: false
 
-- name: 显示 Schema 校验结果
+    - name: 写入 Claude settings.json 到控制端临时文件
+      copy:
+        dest: "{{ agent_claude_code_settings_schema_temp.path }}"
+        content: "{{ agent_claude_code_settings_json_raw.content | b64decode }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    - name: 校验 Claude settings.json Schema
+      command:
+        argv:
+          - check-jsonschema
+          - --schemafile
+          - "{{ agent_claude_code_settings_schemafile }}"
+          - "{{ agent_claude_code_settings_schema_temp.path }}"
+      register: agent_claude_code_schema_validation
+      changed_when: false
+      delegate_to: localhost
+      become: false
+  always:
+    - name: 清理 Claude settings.json Schema 校验临时文件
+      file:
+        path: "{{ agent_claude_code_settings_schema_temp.path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      when:
+        - agent_claude_code_settings_schema_temp is defined
+        - agent_claude_code_settings_schema_temp.path is defined
+
+- name: 显示 Claude settings.json Schema 校验结果
   debug:
-    msg: >-
-      {{
-        '✓ settings.json 通过 JSON Schema 校验'
-        if agent_claude_code_schema_validation.rc == 0
-        else '⚠ settings.json Schema 校验发现问题：\n' + (agent_claude_code_schema_validation.stderr | default(''))
-      }}
+    msg: "✓ settings.json 通过 JSON Schema 校验"
   when:
     - agent_claude_code_manage_settings | bool
     - agent_claude_code_verify_schema | bool
