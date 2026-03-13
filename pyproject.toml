@@ -12,7 +12,7 @@ dependencies = [
 # Python 换源
 [tool.uv]
 index-url = "https://mirrors.aliyun.com/pypi/simple"
-package = true
+package = false
 
 [dependency-groups]
 dev = [
