@@ -1,149 +1,151 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to AI coding agents working in this repository.
 
-## 项目概述
+## 项目快照
 
-基于 Ansible 一键同步 Claude Code/Codex 等 AI Agent 工具配置的自动化项目。通过模块化 Roles 管理文件、JSON 合并、目录树同步和 npm 工具安装。
+这是一个基于 Ansible 的 AI Agent 配置管理仓库，目标是把 Claude Code、Codex CLI、GitHub Copilot CLI 以及 agent skills 以声明式方式同步到本地或远端主机。
+
+仓库根目录的 `AGENTS.md` 用于约束你在这个代码仓库里的工作方式；`inventory/<profile>/codex_assets/AGENTS.md` 则是样例资产，会被同步到目标机的 `~/.codex/AGENTS.md`，两者不要混淆。
 
 ## 常用命令
 
 ```bash
 # 依赖安装
-uv sync            # 生产依赖
-uv sync --dev      # 含 molecule 测试依赖
+uv sync
+uv sync --dev
 
-# 运行 Playbook（部署 Claude Code 配置）
+# 运行 Playbook
 uv run ansible-playbook playbooks/setup_claude_code.yml
-uv run ansible-playbook playbooks/setup_claude_code.yml -e "target_hosts=all"
-
-# 运行 Playbook（部署 Codex CLI 配置）
 uv run ansible-playbook playbooks/setup_codex.yml
-uv run ansible-playbook playbooks/setup_codex.yml -e "target_hosts=all"
-
-# 运行 Playbook（声明式管理 Agent Skills）
+uv run ansible-playbook playbooks/setup_copilot_cli.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
+
+# 面向 inventory 中全部主机执行
+uv run ansible-playbook playbooks/setup_claude_code.yml -e "target_hosts=all"
+uv run ansible-playbook playbooks/setup_codex.yml -e "target_hosts=all"
+uv run ansible-playbook playbooks/setup_copilot_cli.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
 
 # Molecule 测试（需进入对应 role 目录）
 cd roles/<role-name>
-uv run molecule test                # 完整测试（含幂等性检查）
-uv run molecule converge            # 仅执行 converge
-uv run molecule verify              # 仅执行 verify
-uv run molecule destroy             # 销毁测试容器
-uv run molecule test -s <scenario>  # 运行指定场景（如 json_sorted）
+uv run molecule test
+uv run molecule converge
+uv run molecule verify
+uv run molecule destroy
+uv run molecule test -s <scenario>
 ```
 
-## 架构
+## 心智模型
 
-### Role 依赖关系
+### 顶层编排 role
 
 ```text
-agent_claude_code（顶层编排）
-  ├── npm_command_bootstrap    — 检查/安装 npm CLI 工具（claude、ccline）
-  ├── managed_file             — 单文件管理（模板渲染、diff 预览、备份）
-  ├── managed_json_merge       — JSON deep merge（部分更新而非全量重写）
-  └── managed_tree             — 目录树同步（rsync/archive，自动检测容器环境）
+agent_claude_code
+  ├── npm_command_bootstrap
+  ├── managed_file
+  ├── managed_json_merge
+  └── managed_tree
 
-agent_codex（顶层编排）
-  ├── npm_command_bootstrap    — 检查/安装 npm CLI 工具（codex）
-  └── managed_file             — 管理 config.toml、.env 与 AGENTS.md
+agent_codex
+  ├── npm_command_bootstrap
+  └── managed_file
 
-managed_agent_skills（独立 skills 编排）
-  └── npm_command_bootstrap    — 检查/安装 skills CLI
+agent_copilot_cli
+  ├── npm_command_bootstrap
+  └── managed_file
+
+managed_agent_skills
+  └── npm_command_bootstrap
 ```
 
-### agent_claude_code 执行流程
+### 各入口 role 的职责
 
-1. **validate** — 检查 Claude CLI / ccline 可用性（复用 npm_command_bootstrap）
-2. **plugins** — 管理 marketplace 插件安装
-3. **sync_user_json** — Deep merge `~/.claude.json`（复用 managed_json_merge）
-4. **sync_settings** — 生成并同步 `~/.claude/settings.json`（复用 managed_file + 模板）
-5. **sync_assets** — 同步 output-styles、CLAUDE.md 到 `~/.claude/`（复用 managed_tree + managed_file）
+- `agent_claude_code`：检查 Claude CLI / ccline，管理插件，合并 `~/.claude.json`，生成 `settings.json`，同步 `output-styles/` 和 `CLAUDE.md`。
+- `agent_codex`：检查 Codex CLI，生成 `config.toml` 和 `.env`，同步 `AGENTS.md`。
+- `agent_copilot_cli`：检查 Copilot CLI，生成并验证 `~/.copilot/mcp-config.json`。
+- `managed_agent_skills`：基于 `skills` CLI 声明式安装或卸载 skills。
 
-### agent_codex 执行流程
+### 基础能力 role
 
-1. **validate** — 检查 Codex CLI 可用性并校验输入结构（复用 npm_command_bootstrap）
-2. **sync_config** — 生成并同步 `~/.codex/config.toml`（复用 managed_file + 模板）
-3. **sync_env** — 按需生成并同步 `~/.codex/.env`（复用 managed_file + 模板）
-4. **sync_assets** — 按需同步 `AGENTS.md` 到 `~/.codex/`（复用 managed_file）
+- `managed_file`：单文件模板渲染、排序、diff 预览、备份。
+- `managed_json_merge`：JSON deep merge。
+- `managed_tree`：目录树同步，容器环境会自动从 `synchronize` 切换到 archive 方案。
+- `npm_command_bootstrap`：CLI 检查与按需全局 npm 安装。
 
-### Inventory 结构
+## 关键目录
 
 ```text
-inventory/<profile>/
-  ├── inventory.yml
-  ├── group_vars/all/
-  │   └── agent_mcps/
-  │       └── servers.yml     # Claude/Codex 共用 MCP 配置
-  ├── group_vars/all/
-  │   └── claude_code/
-  │       ├── backup.yml       # Claude Code 备份根目录
-  │       ├── settings.yml     # Claude Code 设置
-  │       ├── models.yml       # 模型提供商配置
-  │       └── mcp_servers.yml  # Claude Code MCP 覆盖项
-  └── claude_assets/           # 可选资产（自动发现）
-      ├── output-styles/
-      └── CLAUDE.md
-
-inventory/<profile>/
-  ├── inventory.yml
-  ├── group_vars/all/
-  │   └── agent_mcps/
-  │       └── servers.yml     # Claude/Codex 共用 MCP 配置
-  ├── group_vars/all/
-  │   └── codex/
-  │       ├── backup.yml       # Codex 备份根目录
-  │       ├── settings.yml     # Codex 基础设置
-  │       ├── models.yml       # Codex 模型与 provider 配置
-  │       └── mcp_servers.yml  # Codex MCP 覆盖项
-  └── codex_assets/            # 可选资产（自动发现）
-      └── AGENTS.md
-
-inventory/<profile>/
-  ├── inventory.yml
-  ├── group_vars/all/
-  │   └── agent_skills/
-  │       ├── settings.yml     # skills CLI / role 编排设置
-  │       └── items.yml        # 声明式 skill 条目
-  └── agent_skills_assets/     # 可选本地 skill 源目录
+playbooks/                     # 顶层入口
+roles/                         # 所有 Ansible roles
+inventory/default/             # 默认 inventory 示例
+inventory/default/group_vars/all/
+  ├── agent_mcps/              # Claude / Codex / Copilot 共享 MCP 默认值
+  ├── agent_skills/            # skills CLI 与条目声明
+  ├── claude_code/             # Claude Code 设置、模型、备份、MCP 覆盖
+  ├── codex/                   # Codex 设置、模型、备份、MCP 覆盖
+  ├── copilot_cli/             # Copilot CLI 设置、备份、MCP 覆盖
+  └── secrets.yml              # inventory 级敏感信息
+inventory/default/claude_assets/
+inventory/default/codex_assets/
+inventory/default/agent_skills_assets/
+tmps/                          # 本地执行时的默认备份和日志目录
 ```
 
-`claude_assets/` 下的资源由 playbook 自动发现，不存在则跳过。可通过变量 `claude_code_output_styles_src`、`claude_code_claude_md_src` 显式覆盖路径。Claude skills 不再由 `setup_claude_code.yml` 直接同步，建议改用 `managed_agent_skills` role 统一管理。
+## 编辑本仓库时要遵守的约定
 
-`codex_assets/` 下的资源由 playbook 自动发现，不存在则跳过。可通过变量 `codex_agents_md_src` 显式覆盖路径。
+### 1. 入口 playbook 负责变量归一化
 
-共享 MCP 默认值统一放在 `group_vars/all/agent_mcps/servers.yml` 的 `agent_mcps` 下；`claude_code/mcp_servers.yml` 与 `codex/mcp_servers.yml` 只保留各自 agent 的覆盖项，入口 playbook 会在归一化阶段自动合并。
+- 顶层 playbook 会显式 `include_vars: dir={{ inventory_dir }}/group_vars/all` 递归加载嵌套变量目录。
+- 新增或调整 inventory 变量时，优先在 playbook `pre_tasks` 中完成兼容映射、默认值推导和结构校验，不要把复杂归一化逻辑塞进 role 内部模板。
 
-`setup_agent_skills.yml` 会递归加载 `group_vars/all/agent_skills/*.yml` 并把 `agent_skills_*` 变量桥接到 `managed_agent_skills`。其中 `source` 必须对目标机可见；仓库内本地路径通常只适用于本地连接，远端主机更建议使用 GitHub shorthand、Git URL，或者目标机上已有的本地路径。
+### 2. role 结构要保持按职责拆分
 
-由于 Claude Code 变量拆在 `group_vars/all/claude_code/*.yml` 子目录中，顶层 playbook / 入口编排需要显式 `include_vars: dir={{ inventory_dir }}/group_vars/all` 递归加载，不能只依赖默认 inventory 自动加载行为。
+- role 内部 task 文件按职责拆分，如 `validate.yml`、`sync_*`、`verify.yml`。
+- `tasks/main.yml` 负责顺序编排，不要把所有逻辑堆进一个超大文件。
+- 默认变量放在 `defaults/main.yml`，模板放在 `templates/`。
 
-当前 `settings.yml` 里的 `env` 仍引用 `model_configs[claude_code_use_model]`，因此编排层需要先把 `claude_code_model_configs` 兼容映射到 `model_configs`，再执行 `agent_claude_code`。
+### 3. 保留现有确认与备份语义
 
-`backup.yml` 默认在本地连接执行时把备份写到仓库 `tmps/claude-code-backups/<inventory_hostname>/` 下；如果切到远端主机执行，则回退到各目标文件旁边的默认备份目录。
+- `managed_file_confirm`、`managed_json_merge_confirm`、`agent_claude_code_confirm_*` 这类变量面向人工执行时的交互确认。
+- 无人值守场景要能通过变量关闭确认；确认逻辑依赖 `pause`，不要改成自定义 TTY 探测。
+- Codex 的 `.env` 可能包含密钥，默认不要开启 diff 确认。
+- 本地连接执行时默认把备份写到仓库 `tmps/*-backups/<inventory_hostname>/`；远端执行时回退到目标文件旁边。
 
-Codex 的 `config.toml`、`.env`、`AGENTS.md` 统一由 `agent_codex` 管理；顶层 playbook 需要先把 `codex/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 与 `codex/mcp_servers.yml` 归一化成单个 `agent_codex_config` 和 `agent_codex_env`，再执行 `agent_codex`。
+### 4. 共享 MCP 与 agent 覆盖要分层维护
 
-Codex 的 `backup.yml` 默认在本地连接执行时把备份写到仓库 `tmps/codex-backups/<inventory_hostname>/` 下；如果切到远端主机执行，则回退到各目标文件旁边的默认备份目录。
+- 共享默认值维护在 `group_vars/all/agent_mcps/servers.yml` 的 `agent_mcps` 下。
+- Claude、Codex、Copilot 的差异化覆盖分别放在各自 `mcp_servers.yml`。
+- Claude Code 需要 `mcpServers` 结构，Codex 需要 `mcp_servers`，Copilot CLI 需要 `mcpServers` 且每个条目带 `tools`；这些转换发生在对应 playbook 的 `pre_tasks`。
 
-## 测试
+### 5. include_role 传路径时先固化 `role_path`
 
-- **框架**: Molecule + Podman（容器镜像 `python:3.13-bookworm`）
-- **每个 Role** 均有独立的 `molecule/default/` 测试场景
-- **部分 Role 有多场景**: managed_file (`json_sorted`)、npm_command_bootstrap (`auto_install`, `required_false`)
-- **测试序列**: dependency → create → prepare → converge → idempotence → verify → destroy
-- molecule.yml 中 `roles_path` 使用绝对路径指向项目根的 `roles/`
-- `managed_tree` / `agent_claude_code` 的容器测试依赖 `managed_tree_transport: auto` 在 Podman / Docker 连接下自动回退到 archive 模式，不要为了绕过 `synchronize` 限制切回 local/default driver
-- `agent_codex` 的验证阶段使用目标端 Python 内置的 `tomllib` 解析 `config.toml`，因此容器/目标主机需要 Python 3.11+
+- 如果一个 role 里 `include_role` 调下游 role，且需要把当前 role 的模板/文件路径传下去，先用 `set_fact` 固化当前 `role_path`。
+- 不要直接把惰性的 `{{ role_path }}` 传进去，否则容易在下游 role 中解析成错误路径。
 
-## 开发约定
+## 当前仓库里的关键细节
 
-- Role 的 task 文件按职责拆分（validate、plugins、sync\_\*），通过 `tasks/main.yml` 用 `include_tasks` 编排
-- 模板文件放在 `templates/`，Jinja2 渲染
-- Role 默认变量在 `defaults/main.yml`，playbook 级归一化逻辑在 playbook 的 `pre_tasks` 中
-- `any_errors_fatal = True`：任何任务失败立即终止
-- `gathering = explicit`：不自动收集 facts，按需启用
-- 在一个 role 里 `include_role` 调下游 role 时，如果需要把当前 role 的模板/文件路径传给下游 role，先用 `set_fact` 固化当前 `role_path`，不要直接把惰性 `{{ role_path }}` 传进去
-- `managed_file_confirm` / `managed_json_merge_confirm` / `agent_claude_code_confirm_*` 适用于人工执行时的交互确认；无人值守执行请关闭 confirm 或显式设置 skip_confirm，确认逻辑依赖 `pause` 而不是自定义 TTY 预判
-- Codex 的 `.env` 可能包含密钥；如果要开启交互确认，优先只对 `config.toml` 开启，不要默认对 `.env` 打开 diff 确认
+- `claude_code/settings.yml` 的 `env` 仍引用 `model_configs[claude_code_use_model]`，因此 `setup_claude_code.yml` 需要先把 `claude_code_model_configs` 映射到兼容变量 `model_configs`。
+- `setup_codex.yml` 会把 `codex/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `codex/mcp_servers.yml` 归一化成单个 `agent_codex_config` / `agent_codex_env` 输入。
+- `setup_copilot_cli.yml` 当前只管理 `~/.copilot/mcp-config.json`，不负责 Copilot CLI 账号、模型或其他偏好设置。
+- `managed_agent_skills` 的 `source` 必须对目标机可见；仓库内路径通常只适用于 `ansible_connection=local`。
+- `ansible.cfg` 中启用了 `any_errors_fatal = True` 和 `gathering = explicit`，所以失败会立刻终止，facts 也不会默认收集。
+
+## 测试策略
+
+- 测试框架是 Molecule + Podman，容器镜像为 `python:3.13-bookworm`。
+- 每个 role 都有 `molecule/default/` 场景。
+- 额外场景包括：
+  - `roles/managed_file/molecule/json_sorted/`
+  - `roles/npm_command_bootstrap/molecule/auto_install/`
+  - `roles/npm_command_bootstrap/molecule/required_false/`
+- `managed_tree` / `agent_claude_code` 的容器测试依赖 `managed_tree_transport: auto` 自动回退到 archive 模式，不要为了绕过容器限制改回固定 `local/default` driver。
+- `agent_codex` 的验证依赖目标端 Python 内置 `tomllib`，目标主机需要 Python `>=3.11`。
+
+如果你修改了某个 role，优先在对应 role 目录下运行相关 Molecule 场景，而不是只做静态阅读。
+
+## 文档更新时的建议
+
+- `README.md` 面向仓库使用者和维护者，应描述仓库能力、目录约定、运行方式和测试方法。
+- 仓库根目录 `AGENTS.md` 面向在仓库里执行任务的 AI 代理，应重点说明架构、约定和易错点。
+- 如果你改动了 playbook、inventory 结构或 role 边界，通常需要同步更新这两个文件。
