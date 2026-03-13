@@ -1,0 +1,5 @@
+# Gemini CLI MCP 覆盖配置
+# 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
+# 这里仅放 Gemini 特有的覆盖项；会在渲染 ~/.gemini/settings.json 前与共享配置递归合并。
+
+gemini_mcp_servers: {}

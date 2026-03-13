@@ -1,0 +1,27 @@
+# Gemini 模型配置
+# model 会合并到 settings.json 的 model 段
+# modelConfigs 会合并到 settings.json 的 modelConfigs 段
+# env 会渲染到 ~/.gemini/.env
+
+gemini_model_configs:
+  gemini_2_5_pro:
+    model:
+      name: "gemini-2.5-pro"
+    modelConfigs:
+      aliases:
+        default-chat:
+          modelConfig:
+            model: "gemini-2.5-pro"
+    env: {}
+
+  gemini_2_5_flash:
+    model:
+      name: "gemini-2.5-flash"
+    modelConfigs:
+      aliases:
+        default-chat:
+          modelConfig:
+            model: "gemini-2.5-flash"
+    env: {}
+
+gemini_use_model: "gemini_2_5_pro"

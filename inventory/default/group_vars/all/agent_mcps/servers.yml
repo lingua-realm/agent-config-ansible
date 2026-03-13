@@ -1,11 +1,15 @@
 # Agent 通用 MCP 服务器配置
-# 这里维护 Claude Code / Codex 共用的默认 MCP 定义。
+# 这里维护 Claude Code / Codex CLI / Gemini CLI / GitHub Copilot CLI 共用的默认 MCP 定义。
 #
 # 覆盖规则：
 # - Claude Code 可在 group_vars/all/claude_code/mcp_servers.yml 的
 #   claude_code_dot_claude_json_merge.mcpServers 下按同名服务覆盖或补充。
 # - Codex 可在 group_vars/all/codex/mcp_servers.yml 的 codex_mcp_servers 下
 #   按同名服务覆盖或补充。
+# - Gemini CLI 可在 group_vars/all/gemini_cli/mcp_servers.yml 的 gemini_mcp_servers 下
+#   按同名服务覆盖或补充。
+# - GitHub Copilot CLI 可在 group_vars/all/copilot_cli/mcp_servers.yml 的
+#   copilot_cli_mcp_servers 下按同名服务覆盖或补充。
 #
 # 统一结构使用显式 type 字段：
 #   stdio: command + args (+ env 可选)

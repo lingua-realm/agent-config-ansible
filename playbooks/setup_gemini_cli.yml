@@ -1,0 +1,297 @@
+---
+# playbooks/setup_gemini_cli.yml
+# Gemini CLI 配置部署（基于本仓库 roles/agent_gemini_cli）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将当前仓库的 gemini_* 变量桥接为 agent_gemini_cli 所需的输入
+# 2. 执行 agent_gemini_cli role，完成 settings.json、.env 与可选 GEMINI.md 同步
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_gemini_cli.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_gemini_cli.yml -e "target_hosts=all"
+#
+# 默认资源目录：
+#   inventory/<profile>/gemini_assets/
+#     - GEMINI.md
+#
+# 默认备份目录（本地连接时）：
+#   <repo>/tmps/gemini-cli-backups/<inventory_hostname>/
+#     - settings/
+#     - env/
+#     - gemini-md/
+#
+# 可选覆盖外部资源：
+#   -e "gemini_gemini_md_src=/path/to/GEMINI.md"
+
+- name: Gemini CLI 配置部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 计算 Gemini 资产目录
+      set_fact:
+        gemini_assets_dir_effective: "{{ gemini_assets_dir | default(inventory_dir ~ '/gemini_assets') }}"
+      tags:
+        - always
+
+    - name: 计算 Gemini 备份根目录
+      set_fact:
+        gemini_backup_root_effective: >-
+          {{
+            gemini_backup_root
+            if (gemini_backup_root is defined)
+            else (
+              (((inventory_dir | dirname) | dirname) ~ '/tmps/gemini-cli-backups/' ~ inventory_hostname)
+              if ((ansible_connection | default('ssh')) == 'local')
+              else ''
+            )
+          }}
+      tags:
+        - always
+
+    - name: 检查默认 GEMINI.md 文件
+      stat:
+        path: "{{ gemini_assets_dir_effective }}/GEMINI.md"
+      register: gemini_default_gemini_md
+      tags:
+        - always
+
+    - name: 校验 Gemini 编排输入
+      assert:
+        that:
+          - gemini_settings is mapping
+          - gemini_model_configs is mapping
+          - gemini_use_model is string
+          - gemini_use_model | length > 0
+          - gemini_use_model in gemini_model_configs
+          - (agent_mcps | default({})) is mapping
+          - (gemini_mcp_servers | default({})) is mapping
+          - (gemini_env | default({})) is mapping
+          - (gemini_settings.model | default({})) is mapping
+          - (gemini_settings.modelConfigs | default({})) is mapping
+          - (gemini_settings.mcpServers | default({})) is mapping
+          - (gemini_model_configs[gemini_use_model].model | default({})) is mapping
+          - (gemini_model_configs[gemini_use_model].modelConfigs | default({})) is mapping
+          - (gemini_model_configs[gemini_use_model].env | default({})) is mapping
+        fail_msg: >-
+          Gemini 编排输入无效：请检查 gemini_cli/settings.yml、models.yml、
+          agent_mcps/servers.yml、gemini_cli/mcp_servers.yml 中的变量结构，
+          尤其是 gemini_use_model、model、modelConfigs、env 与 mcpServers。
+      tags:
+        - always
+
+    - name: 初始化 Gemini MCP 配置
+      set_fact:
+        gemini_mcp_servers_effective: {}
+      tags:
+        - always
+
+    - name: 校验 Gemini MCP 条目
+      assert:
+        that:
+          - item.value is mapping
+          - gemini_server_type in ['local', 'stdio', 'http', 'sse']
+          - (item.value.args is not defined) or ((item.value.args is sequence) and (item.value.args is not string))
+          - (item.value.cwd is not defined) or (item.value.cwd is string)
+          - (item.value.env is not defined) or (item.value.env is mapping)
+          - (item.value.headers is not defined) or (item.value.headers is mapping)
+          - >-
+            (
+              (gemini_server_type in ['local', 'stdio'])
+              and (item.value.command | default('') is string)
+              and ((item.value.command | default('')) | length > 0)
+            )
+            or
+            (
+              (gemini_server_type == 'http')
+              and (gemini_http_url | length > 0)
+            )
+            or
+            (
+              (gemini_server_type == 'sse')
+              and (gemini_sse_url | length > 0)
+            )
+        fail_msg: >-
+          Gemini MCP 条目 {{ item.key }} 无效：
+          local/stdio 需要 command（args/cwd/env 可选），
+          http 需要 url 或 httpUrl，sse 需要 url。
+      vars:
+        gemini_server_type: "{{ item.value.type | default('stdio') | lower }}"
+        gemini_http_url: "{{ item.value.httpUrl | default(item.value.url | default('')) }}"
+        gemini_sse_url: "{{ item.value.url | default('') }}"
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(gemini_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+      tags:
+        - always
+
+    - name: 归一化 Gemini MCP 配置
+      set_fact:
+        gemini_mcp_servers_effective: >-
+          {{
+            gemini_mcp_servers_effective
+            | combine(
+                {
+                  item.key: gemini_server_effective
+                },
+                recursive=True
+              )
+          }}
+      vars:
+        gemini_server_type: "{{ item.value.type | default('stdio') | lower }}"
+        gemini_server_effective: >-
+          {{
+            (
+              {
+                'command': item.value.command,
+                'args': item.value.args | default([]),
+                'env': item.value.env | default({})
+              }
+              | combine(
+                  (
+                    {'cwd': item.value.cwd}
+                    if ((item.value.cwd | default('')) | length > 0)
+                    else {}
+                  ),
+                  recursive=True
+                )
+            )
+            if gemini_server_type in ['local', 'stdio']
+            else
+            (
+              (
+                {
+                  'httpUrl': item.value.httpUrl | default(item.value.url)
+                }
+                if gemini_server_type == 'http'
+                else
+                {
+                  'url': item.value.url
+                }
+              )
+              | combine(
+                  item.value.headers is defined
+                  | ternary({'headers': item.value.headers}, {}),
+                  recursive=True
+                )
+            )
+          }}
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(gemini_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+      tags:
+        - always
+
+    - name: 归一化 agent_gemini_cli 输入变量
+      set_fact:
+        gemini_gemini_md_src_effective: >-
+          {{
+            gemini_gemini_md_src
+            if (gemini_gemini_md_src is defined)
+            else (
+              (gemini_assets_dir_effective ~ '/GEMINI.md')
+              if (gemini_default_gemini_md.stat.isreg | default(false))
+              else ''
+            )
+          }}
+        gemini_settings_effective_base: >-
+          {{
+            {
+              'general': {},
+              'ui': {},
+              'model': {},
+              'modelConfigs': {},
+              'mcpServers': {}
+            } | combine(gemini_settings, recursive=True)
+          }}
+        gemini_active_model_config_effective: "{{ gemini_model_configs[gemini_use_model] }}"
+      tags:
+        - always
+
+    - name: 归一化派生 Gemini 配置变量
+      set_fact:
+        gemini_settings_effective: >-
+          {{
+            gemini_settings_effective_base
+            | combine(
+                {
+                  'model': (
+                    gemini_settings_effective_base.model | default({})
+                  ) | combine(
+                    gemini_active_model_config_effective.model | default({}),
+                    recursive=True
+                  ),
+                  'modelConfigs': (
+                    gemini_settings_effective_base.modelConfigs | default({})
+                  ) | combine(
+                    gemini_active_model_config_effective.modelConfigs | default({}),
+                    recursive=True
+                  ),
+                  'mcpServers': (
+                    gemini_settings_effective_base.mcpServers | default({})
+                  ) | combine(
+                    gemini_mcp_servers_effective,
+                    recursive=True
+                  )
+                },
+                recursive=True
+              )
+          }}
+        gemini_env_effective: >-
+          {{
+            (gemini_active_model_config_effective.env | default({}))
+            | combine(gemini_env | default({}), recursive=True)
+          }}
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 agent_gemini_cli 角色
+      include_role:
+        name: agent_gemini_cli
+      vars:
+        agent_gemini_cli_home_dir: "{{ gemini_home_dir | default(lookup('env', 'HOME') ~ '/.gemini') }}"
+        agent_gemini_cli_settings_path: "{{ gemini_settings_path | default((gemini_home_dir | default(lookup('env', 'HOME') ~ '/.gemini')) ~ '/settings.json') }}"
+        agent_gemini_cli_env_path: "{{ gemini_env_path | default((gemini_home_dir | default(lookup('env', 'HOME') ~ '/.gemini')) ~ '/.env') }}"
+        agent_gemini_cli_gemini_md_path: "{{ gemini_gemini_md_path | default(lookup('env', 'HOME') ~ '/GEMINI.md') }}"
+        agent_gemini_cli_temp_root: "{{ gemini_temp_root | default('/tmp/agent-gemini-cli') }}"
+        agent_gemini_cli_require_gemini_cli: "{{ gemini_require_cli | default(true) | bool }}"
+        agent_gemini_cli_gemini_auto_install_npm: "{{ gemini_auto_install_npm | default('@google/gemini-cli') }}"
+        agent_gemini_cli_manage_settings: "{{ gemini_manage_settings | default(true) | bool }}"
+        agent_gemini_cli_manage_env: "{{ gemini_manage_env | default(gemini_env_effective | length > 0) | bool }}"
+        agent_gemini_cli_manage_gemini_md: "{{ gemini_manage_gemini_md | default(true) | bool }}"
+        agent_gemini_cli_run_verify: "{{ gemini_run_verify | default(true) | bool }}"
+        agent_gemini_cli_confirm_settings_update: "{{ gemini_confirm_settings_update | default(false) | bool }}"
+        agent_gemini_cli_confirm_env_update: "{{ gemini_confirm_env_update | default(false) | bool }}"
+        agent_gemini_cli_backup: "{{ gemini_backup | default(true) | bool }}"
+        agent_gemini_cli_backup_root: "{{ gemini_backup_root_effective }}"
+        agent_gemini_cli_settings: "{{ gemini_settings_effective }}"
+        agent_gemini_cli_env: "{{ gemini_env_effective }}"
+        agent_gemini_cli_gemini_md_src: "{{ gemini_gemini_md_src_effective }}"
+      tags:
+        - always
