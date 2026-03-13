@@ -6,13 +6,56 @@
 # - GitHub shorthand / Git URL：适合 local 与 remote
 # - 本地路径：通常只适用于 ansible_connection=local，或目标机已存在相同路径
 
-agent_skills_items: 
+agent_skills_items:
   - name: 安装 anthropics/skills 官方相关 Skills
     state: present
     source: anthropics/skills
     skills:
-      - frontend-design # 前端设计
-      - skill-creator # 创建自己的skill
+      - frontend-design # 产出高质量、非模板化的前端界面
+      - skill-creator # 创建、改进和评测 skill
+    agents:
+      - claude-code
+      - codex
+    scope: global
+
+  - name: 安装 obra/superpowers 相关 Skills
+    state: present
+    source: obra/superpowers
+    skills:
+      - brainstorming # 在实现前澄清需求、约束和设计方向
+      - dispatching-parallel-agents # 并行分派多个彼此独立的子任务
+      - executing-plans # 按既定实施计划推进并检查阶段结果
+      - finishing-a-development-branch # 开发完成后收尾并决定集成方式
+      - receiving-code-review # 处理 code review 意见前先做技术核验
+      - requesting-code-review # 重大实现完成后主动请求代码审查
+      - subagent-driven-development # 用子代理执行可拆分的实现任务
+      - systematic-debugging # 遇到 bug 或异常时进行系统化排查
+      - test-driven-development # 实现功能或修复缺陷前先进行 TDD
+      - using-git-worktrees # 用 git worktree 隔离特性开发环境
+      - using-superpowers # 会话开始时建立 skills 使用规范
+      - verification-before-completion # 宣称完成前先执行必要验证
+      - writing-plans # 编码前把多步骤任务整理成实施计划
+      - writing-skills # 编写、修改和验证 skill 内容
+    agents:
+      - claude-code
+      - codex
+    scope: global
+
+  - name: 安装 vercel-labs/skills 官方相关 Skills
+    state: present
+    source: vercel-labs/skills
+    skills:
+      - find-skills # 通过 npx find-skills 命令行工具自动查找和安装技能
+    agents:
+      - claude-code
+      - codex
+    scope: global
+
+  - name: 安装 github/awesome-copilot 官方相关 Skills
+    state: present
+    source: github/awesome-copilot
+    skills:
+      - gh-cli # GitHub CLI 相关技能，提供与 GitHub 仓库、Issue、PR 等交互的能力
     agents:
       - claude-code
       - codex
