@@ -1,0 +1,9 @@
+- 安装依赖：`uv sync --dev`
+- 运行 Claude playbook：`uv run ansible-playbook playbooks/setup_claude_code.yml`
+- 运行 Codex playbook：`uv run ansible-playbook playbooks/setup_codex.yml`
+- 运行 Gemini playbook：`uv run ansible-playbook playbooks/setup_gemini_cli.yml`
+- 运行 Copilot playbook：`uv run ansible-playbook playbooks/setup_copilot_cli.yml`
+- 运行 agent skills playbook：`uv run ansible-playbook playbooks/setup_agent_skills.yml`
+- 指定全部 inventory 主机：在 playbook 后追加 `-e "target_hosts=all"`
+- 运行 role 的 Molecule：进入 `roles/<role-name>` 后执行 `uv run molecule test`
+- 常用检查：`uv run ansible-playbook --syntax-check <playbook>`、`git status --short`、`git diff --stat`

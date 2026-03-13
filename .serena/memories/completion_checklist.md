@@ -1,0 +1,5 @@
+- 修改后运行相关验证，优先跑受影响 role 的 Molecule 场景。
+- 若新增或调整顶层 playbook，至少做一次 `ansible-playbook --syntax-check`，必要时用临时目录实跑。
+- 检查 README.md 与 AGENTS.md 是否需要同步更新。
+- 不要主动执行 git commit 或 push。
+- 收尾时查看 `git status --short` 和 `git diff --stat`，明确说明测试范围与未覆盖风险。

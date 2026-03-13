@@ -1,0 +1,8 @@
+- 交流与说明默认使用中文。
+- 变更遵循 KISS、YAGNI、DRY、SOLID，尽量保持最小改动。
+- 先阅读现有代码和约定，再动手修改。
+- 入口 playbook 负责变量归一化；不要把复杂兼容逻辑塞进 role 模板。
+- role 内 task 要按职责拆分，`tasks/main.yml` 只负责编排。
+- 默认变量放 `defaults/main.yml`，模板放 `templates/`。
+- 保留现有确认与备份语义，特别是 `.env` 这类敏感文件默认不要开启 diff 确认。
+- 若 role 里 include_role 需要传当前 role 的路径，先固化 `role_path`。

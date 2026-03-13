@@ -1,0 +1,5 @@
+- 这是一个基于 Ansible 的 AI agent 配置管理仓库。
+- 目标是把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI 与 agent skills 以声明式方式同步到本地或远端主机。
+- 顶层入口是 playbooks/ 下的各个 setup_*.yml；核心实现集中在 roles/。
+- inventory/default/ 提供默认样例，包括 group_vars/all 下的分层变量与各工具资产目录。
+- 测试主要使用 Molecule + Podman；每个 role 通常有独立的 molecule/default 场景。
