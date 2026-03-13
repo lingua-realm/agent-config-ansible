@@ -1,0 +1,9 @@
+# GitHub Copilot CLI MCP 覆盖配置
+# 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
+# 这里仅放 Copilot CLI 特有的覆盖项；会在渲染 ~/.copilot/mcp-config.json 前与共享配置递归合并。
+#
+# Copilot CLI 额外支持的常用字段：
+#   tools: ["*"] 或显式工具名列表
+#   cwd:   仅对 local/stdio 生效的工作目录
+
+copilot_cli_mcp_servers: {}

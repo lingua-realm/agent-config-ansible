@@ -1,0 +1,85 @@
+---
+- name: Converge — GitHub Copilot CLI MCP 自动化配置
+  hosts: all
+  environment:
+    PATH: "{{ agent_copilot_cli_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    agent_copilot_cli_test_root: /tmp/agent-copilot-cli/default
+    agent_copilot_cli_fake_bin: "{{ agent_copilot_cli_test_root }}/fake-bin"
+    agent_copilot_cli_home_dir_test: "{{ agent_copilot_cli_test_root }}/home/.copilot"
+  tasks:
+    - name: 准备测试目录
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ agent_copilot_cli_test_root }}"
+        - "{{ agent_copilot_cli_fake_bin }}"
+        - "{{ agent_copilot_cli_test_root }}/home"
+        - "{{ agent_copilot_cli_home_dir_test }}"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 安装假 copilot 可执行文件
+      copy:
+        src: "{{ playbook_dir }}/files/fake-bin/copilot"
+        dest: "{{ agent_copilot_cli_fake_bin }}/copilot"
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 预置旧的 mcp-config.json
+      copy:
+        dest: "{{ agent_copilot_cli_home_dir_test }}/mcp-config.json"
+        content: |
+          {
+            "mcpServers": {
+              "legacy": {
+                "type": "stdio",
+                "command": "python3",
+                "args": ["-m", "legacy"],
+                "tools": ["legacy_tool"]
+              }
+            }
+          }
+        mode: "0644"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行 agent_copilot_cli 角色
+      include_role:
+        name: agent_copilot_cli
+      vars:
+        agent_copilot_cli_home_dir: "{{ agent_copilot_cli_home_dir_test }}"
+        agent_copilot_cli_temp_root: "{{ agent_copilot_cli_test_root }}/tmp"
+        agent_copilot_cli_mcp_config:
+          mcpServers:
+            legacy:
+              tools:
+                - legacy_tool
+                - extra_tool
+            context7:
+              type: stdio
+              command: npx
+              args:
+                - -y
+                - '@upstash/context7-mcp'
+              env: {}
+              tools:
+                - "*"
+            deepwiki:
+              type: http
+              url: https://mcp.deepwiki.com/mcp
+              headers: {}
+              tools:
+                - read_page
+            playwright:
+              type: stdio
+              command: npx
+              args:
+                - '@playwright/mcp@latest'
+              env: {}
+              cwd: /workspace
+              tools:
+                - "*"

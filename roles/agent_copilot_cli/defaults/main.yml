@@ -1,0 +1,41 @@
+---
+# Copilot CLI 配置根目录
+agent_copilot_cli_home_dir: "{{ lookup('env', 'HOME') }}/.copilot"
+
+# Copilot CLI MCP 配置文件路径
+agent_copilot_cli_mcp_config_path: "{{ agent_copilot_cli_home_dir }}/mcp-config.json"
+
+# 角色工作临时目录
+agent_copilot_cli_temp_root: /tmp/agent-copilot-cli
+
+# 是否要求 Copilot CLI 可用
+agent_copilot_cli_require_copilot_cli: true
+
+# Copilot CLI 不可用时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+agent_copilot_cli_copilot_auto_install_npm: "@github/copilot"
+
+# 是否管理 mcp-config.json 以及执行最终验证
+agent_copilot_cli_manage_mcp_config: true
+agent_copilot_cli_run_verify: true
+
+# 是否在变更 mcp-config.json 时交互确认
+agent_copilot_cli_confirm_mcp_config_update: false
+
+# 是否为 mcp-config.json 创建备份
+agent_copilot_cli_backup: true
+
+# 统一备份根目录；为空时回退到 Copilot 目录下的默认备份目录
+agent_copilot_cli_backup_root: ""
+
+# mcp-config.json 备份目录与前缀
+agent_copilot_cli_mcp_config_backup_dir: >-
+  {{
+    ((agent_copilot_cli_backup_root | regex_replace('/+$', '')) ~ '/mcp-config')
+    if (agent_copilot_cli_backup_root | length > 0)
+    else ((agent_copilot_cli_home_dir | regex_replace('/+$', '')) ~ '/.managed_json_merge_backups')
+  }}
+agent_copilot_cli_mcp_config_backup_prefix: mcp-config.json
+
+# 将被 deep merge 到 mcp-config.json 的对象
+agent_copilot_cli_mcp_config:
+  mcpServers: {}

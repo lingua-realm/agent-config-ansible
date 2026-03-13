@@ -1,0 +1,19 @@
+---
+- name: Copilot CLI 自动化配置入口
+  include_tasks: validate.yml
+
+- name: Copilot CLI MCP 配置阶段
+  include_tasks: sync_mcp_config.yml
+  when: agent_copilot_cli_manage_mcp_config | bool
+
+- name: Copilot CLI 验证阶段
+  include_tasks: verify.yml
+  when: agent_copilot_cli_run_verify | bool
+
+- name: 汇总 Copilot CLI 自动化配置结果
+  set_fact:
+    agent_copilot_cli_result:
+      changed: "{{ agent_copilot_cli_mcp_config_result.changed | bool }}"
+      copilot_cli: "{{ agent_copilot_cli_copilot_status }}"
+      mcp_config: "{{ agent_copilot_cli_mcp_config_result }}"
+  changed_when: false

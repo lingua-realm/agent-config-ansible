@@ -1,0 +1,88 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 1：校验 Copilot CLI MCP 配置输入
+      ========================================
+
+- name: 校验 Copilot CLI 角色输入
+  assert:
+    that:
+      - agent_copilot_cli_home_dir | length > 0
+      - agent_copilot_cli_mcp_config_path | length > 0
+      - agent_copilot_cli_temp_root | length > 0
+      - agent_copilot_cli_mcp_config is mapping
+    fail_msg: >-
+      agent_copilot_cli 角色参数无效：请确保 home_dir / mcp_config_path /
+      temp_root 非空，且 mcp_config 为对象结构。
+
+- name: 归一化 Copilot CLI MCP 配置对象
+  set_fact:
+    agent_copilot_cli_mcp_config_normalized: >-
+      {{
+        {
+          'mcpServers': {}
+        } | combine(agent_copilot_cli_mcp_config, recursive=True)
+      }}
+  changed_when: false
+
+- name: 校验归一化后的 Copilot CLI MCP 配置
+  assert:
+    that:
+      - agent_copilot_cli_mcp_config_normalized.mcpServers is mapping
+    fail_msg: >-
+      agent_copilot_cli 角色参数无效：mcp-config.json patch 必须包含对象结构的 mcpServers。
+  when: agent_copilot_cli_manage_mcp_config | bool
+
+- name: 归一化 Copilot CLI 辅助变量
+  set_fact:
+    agent_copilot_cli_mcp_config_result:
+      changed: false
+      path: "{{ agent_copilot_cli_mcp_config_path }}"
+    agent_copilot_cli_role_path: "{{ role_path }}"
+    agent_copilot_cli_copilot_status: {}
+  changed_when: false
+
+- name: 确保 Copilot CLI 目录存在
+  file:
+    path: "{{ agent_copilot_cli_home_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: 确保 Copilot CLI 临时目录存在
+  file:
+    path: "{{ agent_copilot_cli_temp_root }}"
+    state: directory
+    mode: "0700"
+
+- name: 检查 Copilot CLI
+  include_role:
+    name: npm_command_bootstrap
+  vars:
+    npm_command_bootstrap_key: copilot
+    npm_command_bootstrap_display_name: GitHub Copilot CLI
+    npm_command_bootstrap_command: copilot
+    npm_command_bootstrap_version_command: copilot --version
+    npm_command_bootstrap_auto_install_npm: >-
+      {{ agent_copilot_cli_copilot_auto_install_npm if (agent_copilot_cli_copilot_auto_install_npm | length > 0) else omit }}
+    npm_command_bootstrap_required: "{{ agent_copilot_cli_require_copilot_cli | bool }}"
+    npm_command_bootstrap_fail_message: "未检测到可用的 GitHub Copilot CLI，无法继续执行 Copilot CLI MCP 配置。"
+    npm_command_bootstrap_install_fail_message: "GitHub Copilot CLI 自动安装失败，请检查 npm 环境或手动安装。"
+  when: agent_copilot_cli_require_copilot_cli | bool
+
+- name: 暴露 Copilot CLI 状态
+  set_fact:
+    agent_copilot_cli_copilot_status: "{{ npm_command_bootstrap_results.copilot | default({}) }}"
+  changed_when: false
+  when:
+    - agent_copilot_cli_require_copilot_cli | bool
+    - npm_command_bootstrap_results is defined
+
+- name: 显示 Copilot CLI 状态汇总
+  debug:
+    msg: |
+      ----------------------------------------
+      GitHub Copilot CLI：{{ agent_copilot_cli_copilot_status.version | default('未检查') }}
+      ----------------------------------------
+  when: agent_copilot_cli_require_copilot_cli | bool

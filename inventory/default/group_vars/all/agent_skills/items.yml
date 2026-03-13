@@ -16,6 +16,7 @@ agent_skills_items:
     agents:
       - claude-code
       - codex
+      - github-copilot
     scope: global
 
   - name: 安装 obra/superpowers 相关 Skills
@@ -39,6 +40,7 @@ agent_skills_items:
     agents:
       - claude-code
       - codex
+      - github-copilot
     scope: global
 
   - name: 安装 vercel-labs/skills 官方相关 Skills
@@ -49,6 +51,7 @@ agent_skills_items:
     agents:
       - claude-code
       - codex
+      - github-copilot
     scope: global
 
   - name: 安装 github/awesome-copilot 官方相关 Skills
@@ -59,6 +62,7 @@ agent_skills_items:
     agents:
       - claude-code
       - codex
+      - github-copilot
     scope: global
 #
 #   - name: 卸载 Claude 遗留 skill

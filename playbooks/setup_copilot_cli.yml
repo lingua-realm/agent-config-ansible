@@ -1,0 +1,197 @@
+---
+# playbooks/setup_copilot_cli.yml
+# GitHub Copilot CLI MCP 配置部署（基于本仓库 roles/agent_copilot_cli）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将共享 agent_mcps 与 copilot_cli 覆盖项归一化为 Copilot CLI 的 mcp-config.json 结构
+# 2. 执行 agent_copilot_cli role，完成 ~/.copilot/mcp-config.json 同步
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_copilot_cli.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_copilot_cli.yml -e "target_hosts=all"
+#
+# 默认变量目录：
+#   inventory/<profile>/group_vars/all/copilot_cli/
+#     - backup.yml
+#     - settings.yml
+#     - mcp_servers.yml
+#
+# 默认备份目录（本地连接时）：
+#   <repo>/tmps/copilot-cli-backups/<inventory_hostname>/
+#     - mcp-config/
+
+- name: GitHub Copilot CLI MCP 配置部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 计算 Copilot CLI 备份根目录
+      set_fact:
+        copilot_cli_backup_root_effective: >-
+          {{
+            copilot_cli_backup_root
+            if (copilot_cli_backup_root is defined)
+            else (
+              (((inventory_dir | dirname) | dirname) ~ '/tmps/copilot-cli-backups/' ~ inventory_hostname)
+              if ((ansible_connection | default('ssh')) == 'local')
+              else ''
+            )
+          }}
+      tags:
+        - always
+
+    - name: 校验 Copilot CLI 编排输入
+      assert:
+        that:
+          - (agent_mcps | default({})) is mapping
+          - (copilot_cli_mcp_servers | default({})) is mapping
+          - (copilot_cli_default_tools | default(['*'])) is sequence
+          - (copilot_cli_default_tools | default(['*'])) is not string
+        fail_msg: >-
+          Copilot CLI 编排输入无效：请检查 agent_mcps/servers.yml 与
+          copilot_cli/settings.yml、copilot_cli/mcp_servers.yml 中的变量结构，
+          尤其是 agent_mcps、copilot_cli_mcp_servers 与 copilot_cli_default_tools。
+      tags:
+        - always
+
+    - name: 初始化 Copilot CLI MCP 配置
+      set_fact:
+        copilot_cli_mcp_servers_effective: {}
+      tags:
+        - always
+
+    - name: 校验 Copilot CLI MCP 条目
+      assert:
+        that:
+          - item.value is mapping
+          - copilot_cli_server_type in ['local', 'stdio', 'http', 'sse']
+          - (item.value.tools is not defined) or ((item.value.tools is sequence) and (item.value.tools is not string))
+          - (item.value.cwd is not defined) or (item.value.cwd is string)
+          - (item.value.env is not defined) or (item.value.env is mapping)
+          - (item.value.headers is not defined) or (item.value.headers is mapping)
+          - >-
+            (
+              (copilot_cli_server_type in ['local', 'stdio'])
+              and (item.value.command | default('') is string)
+              and ((item.value.command | default('')) | length > 0)
+              and ((item.value.args is not defined) or ((item.value.args is sequence) and (item.value.args is not string)))
+            )
+            or
+            (
+              (copilot_cli_server_type in ['http', 'sse'])
+              and (item.value.url | default('') is string)
+              and ((item.value.url | default('')) | length > 0)
+            )
+        fail_msg: >-
+          Copilot CLI MCP 条目 {{ item.key }} 无效：
+          local/stdio 需要 command（args 可选），http/sse 需要 url；
+          tools 必须是数组，env/headers 必须是对象。
+      vars:
+        copilot_cli_server_type: "{{ item.value.type | default('stdio') | lower }}"
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(copilot_cli_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+      tags:
+        - always
+
+    - name: 归一化 Copilot CLI MCP 配置
+      set_fact:
+        copilot_cli_mcp_servers_effective: >-
+          {{
+            copilot_cli_mcp_servers_effective
+            | combine(
+                {
+                  item.key: copilot_cli_server_effective
+                },
+                recursive=True
+              )
+          }}
+      vars:
+        copilot_cli_server_type: "{{ item.value.type | default('stdio') | lower }}"
+        copilot_cli_server_effective: >-
+          {{
+            {
+              'type': copilot_cli_server_type,
+              'tools': item.value.tools | default(copilot_cli_default_tools | default(['*']))
+            }
+            | combine(
+                (
+                  {
+                    'command': item.value.command,
+                    'args': item.value.args | default([]),
+                    'env': item.value.env | default({})
+                  }
+                  | combine(
+                      (
+                        {'cwd': item.value.cwd}
+                        if ((item.value.cwd | default('')) | length > 0)
+                        else {}
+                      ),
+                      recursive=True
+                    )
+                )
+                if copilot_cli_server_type in ['local', 'stdio']
+                else
+                {
+                  'url': item.value.url,
+                  'headers': item.value.headers | default({})
+                },
+                recursive=True
+              )
+          }}
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(copilot_cli_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 agent_copilot_cli 角色
+      include_role:
+        name: agent_copilot_cli
+      vars:
+        agent_copilot_cli_home_dir: "{{ copilot_cli_home_dir | default(lookup('env', 'HOME') ~ '/.copilot') }}"
+        agent_copilot_cli_mcp_config_path: >-
+          {{
+            copilot_cli_mcp_config_path
+            | default(
+                (copilot_cli_home_dir | default(lookup('env', 'HOME') ~ '/.copilot')) ~ '/mcp-config.json'
+              )
+          }}
+        agent_copilot_cli_temp_root: "{{ copilot_cli_temp_root | default('/tmp/agent-copilot-cli') }}"
+        agent_copilot_cli_require_copilot_cli: "{{ copilot_cli_require_cli | default(true) | bool }}"
+        agent_copilot_cli_copilot_auto_install_npm: "{{ copilot_cli_auto_install_npm | default('@github/copilot') }}"
+        agent_copilot_cli_manage_mcp_config: "{{ copilot_cli_manage_mcp_config | default(true) | bool }}"
+        agent_copilot_cli_run_verify: "{{ copilot_cli_run_verify | default(true) | bool }}"
+        agent_copilot_cli_confirm_mcp_config_update: "{{ copilot_cli_confirm_mcp_config_update | default(false) | bool }}"
+        agent_copilot_cli_backup: "{{ copilot_cli_backup | default(true) | bool }}"
+        agent_copilot_cli_backup_root: "{{ copilot_cli_backup_root_effective }}"
+        agent_copilot_cli_mcp_config:
+          mcpServers: "{{ copilot_cli_mcp_servers_effective }}"
+      tags:
+        - always
