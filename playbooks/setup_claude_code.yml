@@ -90,13 +90,28 @@
           - claude_code_use_model is string
           - claude_code_use_model | length > 0
           - claude_code_use_model in claude_code_model_configs
+          - (agent_mcps | default({})) is mapping
           - claude_code_dot_claude_json_merge is mapping
           - (claude_code_settings.enabled_plugins | default([])) is sequence
           - (claude_code_settings.enabled_plugins | default([])) is not string
           - (claude_code_dot_claude_json_merge.mcpServers | default({})) is mapping
         fail_msg: >-
-          Claude Code 编排输入无效：请检查 claude_code/settings.yml、models.yml、mcp_servers.yml
-          中的变量结构，尤其是 claude_code_use_model、enabled_plugins 与 mcpServers。
+          Claude Code 编排输入无效：请检查 claude_code/settings.yml、models.yml、
+          agent_mcps/servers.yml、claude_code/mcp_servers.yml 中的变量结构，
+          尤其是 claude_code_use_model、enabled_plugins 与 mcpServers。
+      tags:
+        - always
+
+    - name: 归一化共享 Claude MCP 配置
+      set_fact:
+        claude_code_mcp_servers_effective: >-
+          {{
+            (agent_mcps | default({}))
+            | combine(
+                claude_code_dot_claude_json_merge.mcpServers | default({}),
+                recursive=True
+              )
+          }}
       tags:
         - always
 
@@ -143,10 +158,19 @@
           }}
         claude_code_user_json_effective: >-
           {{
-            claude_code_dot_claude_json_merge
-            | dict2items
-            | rejectattr('key', 'equalto', 'confirm_claude_json_update')
-            | items2dict
+            (
+              claude_code_dot_claude_json_merge
+              | dict2items
+              | rejectattr('key', 'equalto', 'confirm_claude_json_update')
+              | rejectattr('key', 'equalto', 'mcpServers')
+              | items2dict
+            )
+            | combine(
+                {
+                  'mcpServers': claude_code_mcp_servers_effective
+                },
+                recursive=True
+              )
           }}
         claude_code_plugins_to_install_effective: >-
           {{

@@ -1,41 +1,6 @@
-# Codex CLI MCP 服务器配置
-# 渲染到 ~/.codex/config.toml 的 [mcp_servers.*] 段
-# 格式说明：
-#   stdio 类型：command + args（+ env 可选）
-#   http 类型：url（+ bearer_token_env_var / headers 可选）
+# Codex CLI MCP 覆盖配置
+# 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
+# 这里仅放 Codex 特有的覆盖项；会在渲染 ~/.codex/config.toml 前与共享配置递归合并。
 
-codex_mcp_servers:
-  # Context7 API 文档检索
-  context7:
-    command: "npx"
-    args: ["-y", "@upstash/context7-mcp"]
-
-  # 用于自动获取网络内容，并转换成 Markdown 格式给 Agent
-  mcp-server-fetch:
-    command: "uvx"
-    args: ["mcp-server-fetch"]
-
-  # 用于自动联网搜索开源仓库信息
-  deepwiki:
-    url: "https://mcp.deepwiki.com/mcp"
-
-  # playwright 浏览器自动化
-  playwright:
-    command: "npx"
-    args: ["@playwright/mcp@latest"]
-
-  # 联网搜索
-  open-websearch:
-    command: "npx"
-    args: ["-y", "open-websearch@latest"]
-    env:  
-      MODE: "stdio"
-      DEFAULT_SEARCH_ENGINE: "duckduckgo"
-      ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,brave"
-
-  # Serena 代码分析和重构
-  serena:
-    command: "uvx"
-    args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
-    startup_timeout_sec: 20
+codex_mcp_servers: {}
 

@@ -74,11 +74,14 @@ managed_agent_skills（独立 skills 编排）
 inventory/<profile>/
   ├── inventory.yml
   ├── group_vars/all/
+  │   └── agent_mcps/
+  │       └── servers.yml     # Claude/Codex 共用 MCP 配置
+  ├── group_vars/all/
   │   └── claude_code/
   │       ├── backup.yml       # Claude Code 备份根目录
   │       ├── settings.yml     # Claude Code 设置
   │       ├── models.yml       # 模型提供商配置
-  │       └── mcp_servers.yml  # MCP 服务器配置
+  │       └── mcp_servers.yml  # Claude Code MCP 覆盖项
   └── claude_assets/           # 可选资产（自动发现）
       ├── output-styles/
       └── CLAUDE.md
@@ -86,11 +89,14 @@ inventory/<profile>/
 inventory/<profile>/
   ├── inventory.yml
   ├── group_vars/all/
+  │   └── agent_mcps/
+  │       └── servers.yml     # Claude/Codex 共用 MCP 配置
+  ├── group_vars/all/
   │   └── codex/
   │       ├── backup.yml       # Codex 备份根目录
   │       ├── settings.yml     # Codex 基础设置
   │       ├── models.yml       # Codex 模型与 provider 配置
-  │       └── mcp_servers.yml  # Codex MCP 服务器配置
+  │       └── mcp_servers.yml  # Codex MCP 覆盖项
   └── codex_assets/            # 可选资产（自动发现）
       └── AGENTS.md
 
@@ -107,6 +113,8 @@ inventory/<profile>/
 
 `codex_assets/` 下的资源由 playbook 自动发现，不存在则跳过。可通过变量 `codex_agents_md_src` 显式覆盖路径。
 
+共享 MCP 默认值统一放在 `group_vars/all/agent_mcps/servers.yml` 的 `agent_mcps` 下；`claude_code/mcp_servers.yml` 与 `codex/mcp_servers.yml` 只保留各自 agent 的覆盖项，入口 playbook 会在归一化阶段自动合并。
+
 `setup_agent_skills.yml` 会递归加载 `group_vars/all/agent_skills/*.yml` 并把 `agent_skills_*` 变量桥接到 `managed_agent_skills`。其中 `source` 必须对目标机可见；仓库内本地路径通常只适用于本地连接，远端主机更建议使用 GitHub shorthand、Git URL，或者目标机上已有的本地路径。
 
 由于 Claude Code 变量拆在 `group_vars/all/claude_code/*.yml` 子目录中，顶层 playbook / 入口编排需要显式 `include_vars: dir={{ inventory_dir }}/group_vars/all` 递归加载，不能只依赖默认 inventory 自动加载行为。
@@ -115,7 +123,7 @@ inventory/<profile>/
 
 `backup.yml` 默认在本地连接执行时把备份写到仓库 `tmps/claude-code-backups/<inventory_hostname>/` 下；如果切到远端主机执行，则回退到各目标文件旁边的默认备份目录。
 
-Codex 的 `config.toml`、`.env`、`AGENTS.md` 统一由 `agent_codex` 管理；顶层 playbook 需要先把 `codex/settings.yml`、`models.yml`、`mcp_servers.yml` 归一化成单个 `agent_codex_config` 和 `agent_codex_env`，再执行 `agent_codex`。
+Codex 的 `config.toml`、`.env`、`AGENTS.md` 统一由 `agent_codex` 管理；顶层 playbook 需要先把 `codex/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 与 `codex/mcp_servers.yml` 归一化成单个 `agent_codex_config` 和 `agent_codex_env`，再执行 `agent_codex`。
 
 Codex 的 `backup.yml` 默认在本地连接执行时把备份写到仓库 `tmps/codex-backups/<inventory_hostname>/` 下；如果切到远端主机执行，则回退到各目标文件旁边的默认备份目录。
 

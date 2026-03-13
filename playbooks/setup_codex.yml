@@ -75,13 +75,51 @@
           - codex_use_model is string
           - codex_use_model | length > 0
           - codex_use_model in codex_model_configs
+          - (agent_mcps | default({})) is mapping
           - (codex_mcp_servers | default({})) is mapping
           - (codex_env | default({})) is mapping
           - (codex_model_configs[codex_use_model].providers | default({})) is mapping
           - (codex_model_configs[codex_use_model].env | default({})) is mapping
         fail_msg: >-
-          Codex 编排输入无效：请检查 codex/settings.yml、models.yml、mcp_servers.yml
-          中的变量结构，尤其是 codex_use_model、providers、env 与 mcp_servers。
+          Codex 编排输入无效：请检查 codex/settings.yml、models.yml、
+          agent_mcps/servers.yml、codex/mcp_servers.yml 中的变量结构，
+          尤其是 codex_use_model、providers、env 与 mcp_servers。
+      tags:
+        - always
+
+    - name: 初始化共享 Codex MCP 配置
+      set_fact:
+        codex_mcp_servers_effective: {}
+      tags:
+        - always
+
+    - name: 归一化共享 Codex MCP 配置
+      set_fact:
+        codex_mcp_servers_effective: >-
+          {{
+            codex_mcp_servers_effective
+            | combine(
+                {
+                  item.key: (
+                    item.value
+                    | dict2items
+                    | rejectattr('key', 'equalto', 'type')
+                    | items2dict
+                  )
+                },
+                recursive=True
+              )
+          }}
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(codex_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
       tags:
         - always
 
@@ -133,7 +171,7 @@
                   'mcp_servers': (
                     codex_settings_effective.mcp_servers | default({})
                   ) | combine(
-                    codex_mcp_servers | default({}),
+                    codex_mcp_servers_effective,
                     recursive=True
                   )
                 },

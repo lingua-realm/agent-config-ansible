@@ -19,6 +19,19 @@
 
 注意 `source` 必须在目标机上可见：`ansible_connection=local` 时可以直接引用仓库路径；远端主机场景更建议使用 GitHub shorthand、Git URL，或者目标机上已有的本地路径。
 
+## 共享 MCP 变量目录
+
+`playbooks/setup_claude_code.yml` 和 `playbooks/setup_codex.yml` 默认会从 `inventory/<profile>/group_vars/all/agent_mcps/` 读取共享 MCP 定义。
+
+- `servers.yml`
+
+其中 `agent_mcps` 使用统一结构维护 MCP 服务器，Claude Code 会直接渲染为 `mcpServers`，Codex 会在编排层自动转换为 `mcp_servers` 所需格式。
+
+如果你需要 agent 特有差异，仍然可以在以下文件里按同名服务做覆盖：
+
+- `group_vars/all/claude_code/mcp_servers.yml`
+- `group_vars/all/codex/mcp_servers.yml`
+
 ## Claude Code 资产目录
 
 `playbooks/setup_claude_code.yml` 默认会从 `inventory/<profile>/claude_assets` 自动发现以下可选资源：

@@ -1,6 +1,8 @@
 # ===== claude.json 增量合并配置 =====
 # 以下配置会递归深度合并到 ~/.claude.json
 # 仅覆盖声明的 key，未声明的保持原样
+# 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
+# 如需仅对 Claude Code 覆盖或补充某个服务，可在下方 mcpServers 中声明同名项。
 #
 # 变量结构：
 #   claude_code_dot_claude_json_merge:
@@ -18,45 +20,5 @@ claude_code_dot_claude_json_merge:
   # 同步前如果存在配置变更，是否需要人工确认
   confirm_claude_json_update: true
 
-  # MCP 服务器配置
-  mcpServers:
-    # Context7 API 文档检索
-    context7:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "@upstash/context7-mcp"]
-
-    # 用于自动获取网络内容，并转换成 Markdown 格式给 Agent
-    mcp-server-fetch:
-      type: "stdio"
-      command: "uvx"
-      args: ["mcp-server-fetch"]
-
-    # 用于自动联网搜索开源仓库信息
-    deepwiki:
-      type: "http"
-      url: "https://mcp.deepwiki.com/mcp"
-      headers: {}
-
-    # playwright 浏览器自动化
-    playwright:
-      type: "stdio"
-      command: "npx"
-      args: ["@playwright/mcp@latest"]
-
-    # 联网搜索
-    open-websearch:
-      type: "stdio"
-      command: "npx"
-      args: ["-y", "open-websearch@latest"]
-      env:  
-        MODE: "stdio"
-        DEFAULT_SEARCH_ENGINE: "duckduckgo"
-        ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,brave"
-
-    # Serena 代码分析和重构
-    serena:
-      type: "stdio"
-      command: "uvx"
-      args: ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
-      startup_timeout_sec: 20
+  # 仅放 Claude Code 特有的 MCP 覆盖项；默认共享配置由 agent_mcps 注入
+  mcpServers: {}
