@@ -16,6 +16,6 @@ codex_model_configs:
         wire_api: "responses"
         env_key: "PPIO_API_KEY"
     env:
-      PPIO_API_KEY: "{{ secrets.api_keys.ppio }}"
+      PPIO_API_KEY: "{{ (secrets | default({})).get('api_keys', {}).get('ppio', '') }}"
 
 codex_use_model: "ppio_gpt5_4"
