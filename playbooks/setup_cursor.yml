@@ -177,7 +177,7 @@
               )
           }}
         agent_cursor_temp_root: "{{ cursor_temp_root | default('/tmp/agent-cursor') }}"
-        agent_cursor_require_agent_cli: "{{ cursor_require_cli | default(true) | bool }}"
+        agent_cursor_require_agent_cli: "{{ cursor_require_agent_cli | default(cursor_require_cli | default(true)) | bool }}"
         agent_cursor_manage_mcp_config: "{{ cursor_manage_mcp_config | default(true) | bool }}"
         agent_cursor_run_verify: "{{ cursor_run_verify | default(true) | bool }}"
         agent_cursor_confirm_mcp_config_update: "{{ cursor_confirm_mcp_config_update | default(false) | bool }}"

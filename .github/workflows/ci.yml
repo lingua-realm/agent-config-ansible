@@ -113,7 +113,7 @@ jobs:
               "claude_code_verify_schema": claude_code_verify_schema,
               "copilot_cli_confirm_mcp_config_update": False,
               "cursor_confirm_mcp_config_update": False,
-              "cursor_require_cli": False,
+              "cursor_require_agent_cli": False,
               "codex_settings": codex_settings,
               "gemini_confirm_settings_update": gemini_confirm_settings_update,
               "gemini_confirm_env_update": gemini_confirm_env_update,
