@@ -1,0 +1,13 @@
+# Cursor 相关设置
+# 当前仅管理 ~/.cursor/mcp.json，用于 Cursor 编辑器与 Cursor Agent CLI 共享的 MCP 扩展能力。
+# 详细说明请参考官方文档：https://cursor.com/docs/cli/mcp
+
+# 是否在更新 mcp.json 前要求人工确认（true/false）
+cursor_confirm_mcp_config_update: true
+
+# 是否要求 Cursor Agent CLI（官方命令为 agent）可用
+cursor_require_cli: true
+
+# 是否管理 mcp.json 以及执行最终验证
+cursor_manage_mcp_config: true
+cursor_run_verify: true

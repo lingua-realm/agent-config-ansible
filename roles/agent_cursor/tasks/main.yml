@@ -1,0 +1,19 @@
+---
+- name: Cursor 自动化配置入口
+  include_tasks: validate.yml
+
+- name: Cursor MCP 配置阶段
+  include_tasks: sync_mcp_config.yml
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: Cursor 验证阶段
+  include_tasks: verify.yml
+  when: agent_cursor_run_verify | bool
+
+- name: 汇总 Cursor 自动化配置结果
+  set_fact:
+    agent_cursor_result:
+      changed: "{{ agent_cursor_mcp_config_result.changed | bool }}"
+      agent_cli: "{{ agent_cursor_agent_cli_status }}"
+      mcp_config: "{{ agent_cursor_mcp_config_result }}"
+  changed_when: false

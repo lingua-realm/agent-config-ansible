@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: agent_cursor
+  author: lingua-realm
+  description: 复用现有基础 role 自动管理 Cursor 的 mcp.json
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: macOS
+      versions:
+        - all
+
+dependencies: []

@@ -1,0 +1,67 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 3：验证 Cursor MCP 配置结果
+      ========================================
+
+- name: 检查 mcp.json 是否存在
+  stat:
+    path: "{{ agent_cursor_mcp_config_path }}"
+  register: agent_cursor_mcp_config_stat
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: 验证 mcp.json 存在
+  assert:
+    that:
+      - agent_cursor_mcp_config_stat.stat.exists
+      - agent_cursor_mcp_config_stat.stat.isreg
+    fail_msg: "mcp.json 不存在"
+    success_msg: "✓ mcp.json 已生成"
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: 解析 mcp.json
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+      - "{{ agent_cursor_mcp_config_path }}"
+  register: agent_cursor_mcp_config_parse
+  changed_when: false
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: 保存解析后的 mcp.json
+  set_fact:
+    agent_cursor_mcp_config_data: "{{ agent_cursor_mcp_config_parse.stdout | from_json }}"
+  changed_when: false
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: 验证 mcpServers 为对象结构
+  assert:
+    that:
+      - agent_cursor_mcp_config_data.mcpServers is mapping
+    fail_msg: "mcp.json 中的 mcpServers 不是对象结构"
+    success_msg: "✓ mcp.json 中的 mcpServers 结构正确"
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: 验证 mcpServers 已正确写入
+  assert:
+    that:
+      - agent_cursor_mcp_config_data.mcpServers[item.key] is defined
+      - agent_cursor_mcp_config_data.mcpServers[item.key] is mapping
+      - >-
+        agent_cursor_mcp_config_data.mcpServers[item.key]
+        == (
+          agent_cursor_mcp_config_data.mcpServers[item.key]
+          | combine(item.value, recursive=True, list_merge='replace')
+        )
+    fail_msg: "mcp.json 中的 MCP Server {{ item.key }} 未至少包含期望配置"
+    success_msg: "✓ MCP Server {{ item.key }} 至少包含期望配置"
+  loop: "{{ agent_cursor_mcp_config_normalized.mcpServers | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when:
+    - agent_cursor_manage_mcp_config | bool
+    - agent_cursor_mcp_config_normalized.mcpServers | length > 0

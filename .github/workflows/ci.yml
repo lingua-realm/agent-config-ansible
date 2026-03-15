@@ -30,6 +30,7 @@ jobs:
           uv run ansible-playbook --syntax-check playbooks/setup_codex.yml
           uv run ansible-playbook --syntax-check playbooks/setup_gemini_cli.yml
           uv run ansible-playbook --syntax-check playbooks/setup_copilot_cli.yml
+          uv run ansible-playbook --syntax-check playbooks/setup_cursor.yml
           uv run ansible-playbook --syntax-check playbooks/setup_agent_skills.yml
 
   setup-tools:
@@ -44,6 +45,7 @@ jobs:
           - codex
           - gemini_cli
           - copilot_cli
+          - cursor
 
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +72,7 @@ jobs:
             codex)        echo "playbook=playbooks/setup_codex.yml"         >> "$GITHUB_OUTPUT" ;;
             gemini_cli)   echo "playbook=playbooks/setup_gemini_cli.yml"    >> "$GITHUB_OUTPUT" ;;
             copilot_cli)  echo "playbook=playbooks/setup_copilot_cli.yml"   >> "$GITHUB_OUTPUT" ;;
+            cursor)       echo "playbook=playbooks/setup_cursor.yml"        >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Write extra-vars file
@@ -109,6 +112,8 @@ jobs:
               "claude_code_dot_claude_json_merge": claude_user_json,
               "claude_code_verify_schema": claude_code_verify_schema,
               "copilot_cli_confirm_mcp_config_update": False,
+              "cursor_confirm_mcp_config_update": False,
+              "cursor_require_cli": False,
               "codex_settings": codex_settings,
               "gemini_confirm_settings_update": gemini_confirm_settings_update,
               "gemini_confirm_env_update": gemini_confirm_env_update,
