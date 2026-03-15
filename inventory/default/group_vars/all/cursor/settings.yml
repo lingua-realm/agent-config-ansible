@@ -6,7 +6,6 @@
 cursor_confirm_mcp_config_update: true
 
 # 是否要求 Cursor Agent CLI（官方命令为 agent）可用
-# 为兼容早期草稿中的变量名，playbook 仍接受 cursor_require_cli，但推荐使用当前变量名。
 cursor_require_agent_cli: true
 
 # 是否管理 mcp.json 以及执行最终验证
