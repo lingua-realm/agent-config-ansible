@@ -202,6 +202,66 @@ uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
 - GitHub Copilot CLI：`tmps/copilot-cli-backups/<inventory_hostname>/`
   - `mcp-config/`
 
+## 推荐使用姿势
+
+为了让这套声明式配置在长期维护时更稳，建议按下面的方式使用：
+
+1. **把 `inventory/default/` 当作模板，而不是长期直接修改的唯一环境。**
+   - 推荐复制出自己的 profile，例如 `inventory/work/`、`inventory/home/`，然后在该 profile 下维护 `group_vars/all/` 和各类 assets。
+   - 这样后续跟进仓库更新时，更容易对比默认示例和你自己的实际配置。
+2. **优先按工具分批执行，再扩大到全部主机。**
+   - 例如先单独运行 `setup_codex.yml` 或 `setup_gemini_cli.yml` 验证结果，再决定是否加上 `-e "target_hosts=all"` 面向全 inventory 推送。
+   - 如果只调整了某一个 agent 的配置，没有必要每次都执行全部 playbook。
+3. **共享项放共享目录，差异项放各工具覆盖文件。**
+   - 通用 MCP 配置尽量维护在 `group_vars/all/agent_mcps/servers.yml`。
+   - 只有某个 agent 需要特殊行为时，再写入对应的 `claude_code/mcp_servers.yml`、`codex/mcp_servers.yml`、`gemini_cli/mcp_servers.yml` 或 `copilot_cli/mcp_servers.yml`。
+4. **把“可同步资产”和“敏感信息”分开维护。**
+   - `CLAUDE.md`、`AGENTS.md`、`GEMINI.md`、skills 源目录这类内容适合放进 inventory 资产目录。
+   - API Key、token 等敏感信息应集中维护在 `group_vars/all/secrets.yml` 或 CI Secret 中，不要写入可公开同步的说明文件。
+5. **保留交互确认用于人工执行，无人值守时显式关闭确认。**
+   - 人工执行时，仓库默认的 confirm/pause 流程可以帮助你在覆盖关键文件前再确认一次。
+   - 放到 CI 或批量自动执行时，再通过 extra vars 把相关确认开关关闭。
+6. **把备份目录当作升级和回滚的第一道保险。**
+   - 本地执行时，优先检查 `tmps/` 下对应工具的备份是否符合预期。
+   - 尤其是 Codex / Gemini 的 `.env` 一类文件，建议在首次落地或大改前先确认备份路径和恢复方式。
+
+## 升级 / 更新指南
+
+仓库后续升级时，建议按以下顺序操作，尽量把风险控制在单个 profile、单个工具、单台主机范围内：
+
+1. **先更新仓库和依赖。**
+
+   ```bash
+   git pull
+   uv sync --dev
+   ```
+
+2. **先阅读本次更新涉及的文档与默认示例。**
+   - 重点关注 `README.md`、仓库根目录 `AGENTS.md`，以及 `inventory/default/group_vars/all/` 下新增或调整的变量文件。
+   - 如果上游调整了目录结构、变量命名或 assets 约定，先把这些变化映射到你自己的 profile，再执行 playbook。
+3. **先做语法校验，再做定向执行。**
+
+   ```bash
+   uv run ansible-playbook --syntax-check playbooks/setup_claude_code.yml
+   uv run ansible-playbook --syntax-check playbooks/setup_codex.yml
+   uv run ansible-playbook --syntax-check playbooks/setup_gemini_cli.yml
+   uv run ansible-playbook --syntax-check playbooks/setup_copilot_cli.yml
+   uv run ansible-playbook --syntax-check playbooks/setup_agent_skills.yml
+   ```
+
+   - 如果你这次只升级某一个工具，也可以只校验和执行对应 playbook。
+4. **先在一个小范围目标上验证。**
+   - 推荐先对 localhost 或单台测试机执行。
+   - 确认生成的配置文件、同步的资产文件以及 CLI 自身校验都正常后，再扩大到 `target_hosts=all`。
+5. **升级后核对备份与结果文件。**
+   - 检查 `tmps/*-backups/<inventory_hostname>/` 是否生成了预期备份。
+   - 再核对目标端的 `settings.json`、`.env`、`AGENTS.md`、`GEMINI.md`、`mcp-config.json` 等关键输出。
+6. **如果升级结果不符合预期，优先按备份回滚。**
+   - 本仓库默认保留覆盖前的备份，通常可以直接从 `tmps/` 或目标文件旁的备份目录恢复。
+   - 回滚后建议重新检查 inventory 变量归一化是否跟上了上游变更，避免重复覆盖出错。
+
+如果你维护了多个 profile，推荐采用“**先升级默认示例理解变更，再逐个 profile 合并**”的节奏，而不是一次性同时修改所有环境配置。
+
 ## GitHub Actions CI
 
 仓库内置 `.github/workflows/ci.yml`，在每次 `push` 时自动触发。
