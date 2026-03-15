@@ -1,0 +1,26 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 2：同步 mcp.json
+      ========================================
+
+- name: 通过 managed_json_merge 管理 mcp.json
+  include_role:
+    name: managed_json_merge
+  vars:
+    managed_json_merge_display_name: mcp.json
+    managed_json_merge_dest: "{{ agent_cursor_mcp_config_path }}"
+    managed_json_merge_template_src: "{{ agent_cursor_role_path }}/templates/mcp-config.patch.yml.j2"
+    managed_json_merge_temp_path: "{{ agent_cursor_temp_root }}/mcp.json.rendered"
+    managed_json_merge_mode: "0644"
+    managed_json_merge_backup: "{{ agent_cursor_backup }}"
+    managed_json_merge_backup_dir: "{{ agent_cursor_mcp_config_backup_dir }}"
+    managed_json_merge_backup_prefix: "{{ agent_cursor_mcp_config_backup_prefix }}"
+    managed_json_merge_confirm: "{{ agent_cursor_confirm_mcp_config_update }}"
+
+- name: 记录 mcp.json 同步结果
+  set_fact:
+    agent_cursor_mcp_config_result: "{{ managed_json_merge_result }}"
+  changed_when: false

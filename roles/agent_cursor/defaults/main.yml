@@ -1,0 +1,38 @@
+---
+# Cursor 配置根目录
+agent_cursor_home_dir: "{{ lookup('env', 'HOME') }}/.cursor"
+
+# Cursor MCP 配置文件路径
+agent_cursor_mcp_config_path: "{{ agent_cursor_home_dir }}/mcp.json"
+
+# 角色工作临时目录
+agent_cursor_temp_root: /tmp/agent-cursor
+
+# 是否要求 Cursor Agent CLI 可用（官方命令为 agent）
+agent_cursor_require_agent_cli: true
+
+# 是否管理 mcp.json 以及执行最终验证
+agent_cursor_manage_mcp_config: true
+agent_cursor_run_verify: true
+
+# 是否在变更 mcp.json 时交互确认
+agent_cursor_confirm_mcp_config_update: false
+
+# 是否为 mcp.json 创建备份
+agent_cursor_backup: true
+
+# 统一备份根目录；为空时回退到 Cursor 目录下的默认备份目录
+agent_cursor_backup_root: ""
+
+# mcp.json 备份目录与前缀
+agent_cursor_mcp_config_backup_dir: >-
+  {{
+    ((agent_cursor_backup_root | regex_replace('/+$', '')) ~ '/mcp-json')
+    if (agent_cursor_backup_root | length > 0)
+    else ((agent_cursor_home_dir | regex_replace('/+$', '')) ~ '/.managed_json_merge_backups')
+  }}
+agent_cursor_mcp_config_backup_prefix: mcp.json
+
+# 将被 deep merge 到 mcp.json 的对象
+agent_cursor_mcp_config:
+  mcpServers: {}

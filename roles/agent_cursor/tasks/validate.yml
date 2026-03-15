@@ -1,0 +1,85 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 1：校验 Cursor MCP 配置输入
+      ========================================
+
+- name: 校验 Cursor 角色输入
+  assert:
+    that:
+      - agent_cursor_home_dir | length > 0
+      - agent_cursor_mcp_config_path | length > 0
+      - agent_cursor_temp_root | length > 0
+      - agent_cursor_mcp_config is mapping
+    fail_msg: >-
+      agent_cursor 角色参数无效：请确保 home_dir / mcp_config_path /
+      temp_root 非空，且 mcp_config 为对象结构。
+
+- name: 归一化 Cursor MCP 配置对象
+  set_fact:
+    agent_cursor_mcp_config_normalized: >-
+      {{
+        {
+          'mcpServers': {}
+        } | combine(agent_cursor_mcp_config, recursive=True)
+      }}
+  changed_when: false
+
+- name: 校验归一化后的 Cursor MCP 配置
+  assert:
+    that:
+      - agent_cursor_mcp_config_normalized.mcpServers is mapping
+    fail_msg: >-
+      agent_cursor 角色参数无效：mcp.json patch 必须包含对象结构的 mcpServers。
+  when: agent_cursor_manage_mcp_config | bool
+
+- name: 归一化 Cursor 辅助变量
+  set_fact:
+    agent_cursor_mcp_config_result:
+      changed: false
+      path: "{{ agent_cursor_mcp_config_path }}"
+    agent_cursor_role_path: "{{ role_path }}"
+    agent_cursor_agent_cli_status: {}
+  changed_when: false
+
+- name: 确保 Cursor 目录存在
+  file:
+    path: "{{ agent_cursor_home_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: 确保 Cursor 临时目录存在
+  file:
+    path: "{{ agent_cursor_temp_root }}"
+    state: directory
+    mode: "0700"
+
+- name: 检查 Cursor Agent CLI
+  include_role:
+    name: npm_command_bootstrap
+  vars:
+    npm_command_bootstrap_key: agent
+    npm_command_bootstrap_display_name: Cursor Agent CLI
+    npm_command_bootstrap_command: agent
+    npm_command_bootstrap_version_command: agent --version
+    npm_command_bootstrap_required: "{{ agent_cursor_require_agent_cli | bool }}"
+    npm_command_bootstrap_fail_message: "未检测到可用的 Cursor Agent CLI（agent），无法继续执行 Cursor MCP 配置。"
+  when: agent_cursor_require_agent_cli | bool
+
+- name: 暴露 Cursor Agent CLI 状态
+  set_fact:
+    agent_cursor_agent_cli_status: "{{ npm_command_bootstrap_results.agent | default({}) }}"
+  changed_when: false
+  when:
+    - agent_cursor_require_agent_cli | bool
+    - npm_command_bootstrap_results is defined
+
+- name: 显示 Cursor Agent CLI 状态汇总
+  debug:
+    msg: |
+      ----------------------------------------
+      Cursor Agent CLI：{{ agent_cursor_agent_cli_status.version | default('未检查') }}
+      ----------------------------------------
+  when: agent_cursor_require_agent_cli | bool

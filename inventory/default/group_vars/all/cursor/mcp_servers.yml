@@ -1,0 +1,11 @@
+# Cursor MCP 覆盖配置
+# 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
+# 这里仅放 Cursor 特有的覆盖项；会在渲染 ~/.cursor/mcp.json 前与共享配置递归合并。
+#
+# Cursor 常用字段：
+#   cwd:         仅对 local/stdio 生效的工作目录
+#   headers:     仅对 http/sse 生效的请求头
+#   disabled:    是否禁用该 MCP Server
+#   autoApprove: 允许自动批准的工具列表
+
+cursor_mcp_servers: {}

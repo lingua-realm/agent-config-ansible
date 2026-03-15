@@ -1,0 +1,64 @@
+---
+- name: Verify — Cursor MCP 配置幂等
+  hosts: all
+  environment:
+    PATH: "{{ agent_cursor_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    agent_cursor_test_root: /tmp/agent-cursor/default
+    agent_cursor_fake_bin: "{{ agent_cursor_test_root }}/fake-bin"
+    agent_cursor_home_dir_test: "{{ agent_cursor_test_root }}/home/.cursor"
+  tasks:
+    - name: 再次执行 agent_cursor 角色
+      include_role:
+        name: agent_cursor
+      vars:
+        agent_cursor_home_dir: "{{ agent_cursor_home_dir_test }}"
+        agent_cursor_temp_root: "{{ agent_cursor_test_root }}/tmp"
+        agent_cursor_mcp_config:
+          mcpServers:
+            legacy:
+              env:
+                MODE: stdio
+            context7:
+              command: npx
+              args:
+                - -y
+                - '@upstash/context7-mcp'
+              env: {}
+              autoApprove:
+                - resolve-library-id
+            deepwiki:
+              url: https://mcp.deepwiki.com/mcp
+              headers: {}
+              disabled: false
+            playwright:
+              command: npx
+              args:
+                - '@playwright/mcp@latest'
+              env: {}
+              cwd: /workspace
+
+    - name: 解析最终 mcp.json
+      command:
+        argv:
+          - python3
+          - -c
+          - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+          - "{{ agent_cursor_home_dir_test }}/mcp.json"
+      register: agent_cursor_mcp_config_final
+      changed_when: false
+
+    - name: 断言第二次执行保持幂等
+      assert:
+        that:
+          - not (agent_cursor_result.changed | bool)
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.legacy.command == 'python3'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.legacy.args == ['-m', 'legacy']
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.legacy.env.MODE == 'stdio'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.context7.command == 'npx'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.context7.autoApprove == ['resolve-library-id']
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.deepwiki.url == 'https://mcp.deepwiki.com/mcp'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.deepwiki.disabled == false
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.playwright.cwd == '/workspace'
+        fail_msg: "agent_cursor 场景验证失败"
+        success_msg: "✓ agent_cursor 场景通过"
