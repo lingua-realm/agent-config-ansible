@@ -99,6 +99,20 @@ uv run ansible-playbook playbooks/setup_cursor.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
 ```
 
+如果希望显式按 profile 运行，也可以使用仓库脚本：
+
+```bash
+scripts/run-playbook.sh default playbooks/setup_codex.yml
+scripts/run-playbook.sh default playbooks/setup_claude_code.yml -e "target_hosts=all"
+```
+
+这个脚本要求两个必填参数：
+
+- 第一个参数是 profile，对应 `inventory/<profile>/inventory.yml`
+- 第二个参数是仓库内 playbook 相对路径，例如 `playbooks/setup_gemini_cli.yml`
+
+脚本内部会自动设置 `ANSIBLE_INVENTORY`，并从仓库根目录执行 `uv run ansible-playbook`。
+
 ## Playbooks 一览
 
 | Playbook                           | 作用                 | 主要输入                                                                                      | 主要输出                                                                                             |
@@ -297,10 +311,10 @@ uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
 
 在仓库的 **Settings → Secrets and variables → Actions** 中配置以下密钥：
 
-| Secret 名称 | 用途 |
-| ----------- | ---- |
+| Secret 名称      | 用途                                     |
+| ---------------- | ---------------------------------------- |
 | `VOLCES_API_KEY` | Claude Code 模型接入（火山引擎 API Key） |
-| `PPIO_API_KEY` | Codex CLI 模型接入（PPIO API Key） |
+| `PPIO_API_KEY`   | Codex CLI 模型接入（PPIO API Key）       |
 
 CI 会将这两个 Secret 写入 `$RUNNER_TEMP/ansible-extra-vars.yml`，并同时覆盖以下确认开关为 `false` 以保证无人值守执行：
 
