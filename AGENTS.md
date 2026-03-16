@@ -23,6 +23,10 @@ uv run ansible-playbook playbooks/setup_copilot_cli.yml
 uv run ansible-playbook playbooks/setup_cursor.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
 
+# 显式指定 profile 运行
+scripts/run-playbook.sh <profile> playbooks/setup_codex.yml
+scripts/run-playbook.sh <profile> playbooks/setup_cursor.yml -e "target_hosts=all"
+
 # 面向 inventory 中全部主机执行
 uv run ansible-playbook playbooks/setup_claude_code.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_codex.yml -e "target_hosts=all"
@@ -109,6 +113,14 @@ inventory/default/agent_skills_assets/
 tmps/                          # 本地执行时的默认备份和日志目录
 ```
 
+## 用户侧推荐使用方式
+
+- 把 `inventory/default/` 当作模板，而不是长期直接修改的唯一环境；推荐复制出自己的 `inventory/<profile>/`。
+- 需要显式切换 profile 时，优先使用 `scripts/run-playbook.sh <profile> <playbook>`，而不是手动维护 `ANSIBLE_INVENTORY`。
+- 通用 MCP 默认值维护在 `group_vars/all/agent_mcps/servers.yml`，只有某个 agent 需要特殊行为时，才写到各自的 `mcp_servers.yml`。
+- `CLAUDE.md`、`AGENTS.md`、`GEMINI.md`、skills 源目录这类可同步资产和 `secrets.yml` 这类敏感信息要分开维护。
+- 先对单个工具或单台主机验证，再扩大到 `target_hosts=all`；本地执行时优先检查 `tmps/` 下的备份结果。
+
 ## 编辑本仓库时要遵守的约定
 
 ### 1. 入口 playbook 负责变量归一化
@@ -150,6 +162,21 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `managed_agent_skills` 的 `source` 必须对目标机可见；仓库内路径通常只适用于 `ansible_connection=local`。
 - `ansible.cfg` 中启用了 `any_errors_fatal = True` 和 `gathering = explicit`，所以失败会立刻终止，facts 也不会默认收集。
 
+## CI 与升级细节
+
+- `.github/workflows/ci.yml` 会在每次 `push` 时触发，先对 6 个入口 playbook 做 `--syntax-check`，再用 matrix 分别执行 `claude_code`、`codex`、`gemini_cli`、`copilot_cli`、`cursor`，并在每个矩阵实例后执行 `setup_agent_skills.yml`。
+- CI 当前固定使用 `inventory/default/inventory.yml` 的 localhost 配置，不会自动切换到其他 profile。
+- 当前 CI 依赖的 Repository Secrets 只有 `VOLCES_API_KEY` 和 `PPIO_API_KEY`。
+- CI 会通过 extra vars 显式关闭这些确认项：
+  - `claude_code_settings.confirm_settings_update`、
+  - `claude_code_dot_claude_json_merge.confirm_claude_json_update`
+  - `copilot_cli_confirm_mcp_config_update`
+  - `cursor_confirm_mcp_config_update`
+  - `codex_settings.confirm_codex_config_update`
+  - `codex_settings.confirm_codex_env_update`
+    并将 `cursor_require_agent_cli` 设为 `false`。
+- 升级仓库时，建议先更新代码和依赖，再阅读 `README.md`、根目录 `AGENTS.md` 以及 `inventory/default/` 下的默认示例变化，然后先做 `--syntax-check`，最后只对需要的工具和小范围目标执行。
+
 ## 测试策略
 
 - 测试框架是 Molecule + Podman，容器镜像为 `python:3.13-bookworm`。
@@ -166,6 +193,6 @@ tmps/                          # 本地执行时的默认备份和日志目录
 
 ## 文档更新时的建议
 
-- `README.md` 面向仓库使用者和维护者，应描述仓库能力、目录约定、运行方式和测试方法。
-- 仓库根目录 `AGENTS.md` 面向在仓库里执行任务的 AI 代理，应重点说明架构、约定和易错点。
+- `README.md` 面向仓库使用者，应保持精简，聚焦仓库能力、最短上手路径、profile 用法和常用命令。
+- 仓库根目录 `AGENTS.md` 面向在仓库里执行任务的 AI 代理，应承接架构、变量归一化、CI、测试边界、升级与易错点等细节。
 - 如果你改动了 playbook、inventory 结构或 role 边界，通常需要同步更新这两个文件。
