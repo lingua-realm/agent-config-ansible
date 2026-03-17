@@ -4,17 +4,21 @@ private_variables: # 仅供当前文件复用的变量
 
 claude_code_model_configs: # 模型配置
   # 模型配置示例，实际使用时请根据需要修改或删除
-  volces_doubao:
+  volces_doubao: # Coding Plan 订阅模型
     base_url: "{{ private_variables.volces_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
     model: "doubao-seed-2.0-code"
-  volces_kimi_k2_5:
+  volces_kimi_k2_5: # Coding Plan 订阅模型
     base_url: "{{ private_variables.volces_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
     model: "kimi-k2.5"
-  qiniu_longcat_flash_lite:
+  qiniu_longcat_flash_lite: # 这个免费模型贼难用，不推荐
     base_url: "{{ private_variables.qiniu_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('qiniu', '') }}"
     model: "meituan/longcat-flash-lite"
+  qiniu_step_3_5_flash: # 这个免费模型效果还行
+    base_url: "{{ private_variables.qiniu_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('qiniu', '') }}"
+    model: "stepfun/step-3.5-flash"
 
-claude_code_use_model: "qiniu_longcat_flash_lite"
+claude_code_use_model: "qiniu_step_3_5_flash"
