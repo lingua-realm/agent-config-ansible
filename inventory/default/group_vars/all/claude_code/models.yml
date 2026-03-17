@@ -1,19 +1,20 @@
-# 模型配置
-claude_code_model_configs:
+private_variables: # 仅供当前文件复用的变量
+  volces_api_base_url: "https://ark.cn-beijing.volces.com/api/coding"
+  qiniu_api_base_url: "https://api.qnaigc.com"
+
+claude_code_model_configs: # 模型配置
   # 模型配置示例，实际使用时请根据需要修改或删除
   volces_doubao:
-    baseURL: https://ark.cn-beijing.volces.com/api/coding
+    base_url: "{{ private_variables.volces_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
-    opus_model: "doubao-seed-2.0-code"
-    sonnet_model: "doubao-seed-2.0-code"
-    haiku_model: "doubao-seed-2.0-code"
-    claude_code_subagent: "doubao-seed-2.0-code"
+    model: "doubao-seed-2.0-code"
   volces_kimi_k2_5:
-    baseURL: https://ark.cn-beijing.volces.com/api/coding
+    base_url: "{{ private_variables.volces_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
-    opus_model: "kimi-k2.5"
-    sonnet_model: "kimi-k2.5"
-    haiku_model: "kimi-k2.5"
-    claude_code_subagent: "kimi-k2.5"
+    model: "kimi-k2.5"
+  qiniu_longcat_flash_lite:
+    base_url: "{{ private_variables.qiniu_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('qiniu', '') }}"
+    model: "meituan/longcat-flash-lite"
 
-claude_code_use_model: "volces_doubao"
+claude_code_use_model: "qiniu_longcat_flash_lite"

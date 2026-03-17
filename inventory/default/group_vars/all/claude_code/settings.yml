@@ -11,12 +11,12 @@ claude_code_settings:
   # ==== 开启深度思考模式 ====
   alwaysThinkingEnabled: true
   env:
-    ANTHROPIC_BASE_URL: "{{ model_configs[claude_code_use_model].baseURL }}"
+    ANTHROPIC_BASE_URL: "{{ model_configs[claude_code_use_model].base_url }}"
     ANTHROPIC_API_KEY: "{{ model_configs[claude_code_use_model].api_key }}"
-    ANTHROPIC_DEFAULT_OPUS_MODEL: "{{ model_configs[claude_code_use_model].opus_model }}"
-    ANTHROPIC_DEFAULT_SONNET_MODEL: "{{ model_configs[claude_code_use_model].sonnet_model }}"
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: "{{ model_configs[claude_code_use_model].haiku_model }}"
-    CLAUDE_CODE_SUBAGENT_MODEL: "{{ model_configs[claude_code_use_model].claude_code_subagent }}"
+    ANTHROPIC_DEFAULT_OPUS_MODEL: "{{ model_configs[claude_code_use_model].opus_model | default(model_configs[claude_code_use_model].model) }}"
+    ANTHROPIC_DEFAULT_SONNET_MODEL: "{{ model_configs[claude_code_use_model].sonnet_model | default(model_configs[claude_code_use_model].model) }}"
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: "{{ model_configs[claude_code_use_model].haiku_model | default(model_configs[claude_code_use_model].model) }}"
+    CLAUDE_CODE_SUBAGENT_MODEL: "{{ model_configs[claude_code_use_model].claude_code_subagent | default(model_configs[claude_code_use_model].model) }}"
     # 隐私与遥测控制
     DISABLE_TELEMETRY: "1"
     DISABLE_ERROR_REPORTING: "1"
