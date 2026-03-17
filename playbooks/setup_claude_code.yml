@@ -137,18 +137,8 @@
               else ''
             )
           }}
-        claude_code_confirm_settings_update_effective: >-
-          {{
-            claude_code_confirm_settings_update
-            if (claude_code_confirm_settings_update is defined)
-            else (claude_code_settings.confirm_settings_update | default(false))
-          }}
-        claude_code_confirm_user_json_update_effective: >-
-          {{
-            claude_code_confirm_user_json_update
-            if (claude_code_confirm_user_json_update is defined)
-            else (claude_code_dot_claude_json_merge.confirm_claude_json_update | default(false))
-          }}
+        claude_code_confirm_settings_update_effective: "{{ claude_code_confirm_settings_update | default(true) }}"
+        claude_code_confirm_user_json_update_effective: "{{ claude_code_confirm_user_json_update | default(true) }}"
         claude_code_settings_effective: >-
           {{
             (

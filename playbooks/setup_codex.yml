@@ -135,18 +135,8 @@
               else ''
             )
           }}
-        codex_confirm_config_update_effective: >-
-          {{
-            codex_confirm_config_update
-            if (codex_confirm_config_update is defined)
-            else (codex_settings.confirm_codex_config_update | default(false))
-          }}
-        codex_confirm_env_update_effective: >-
-          {{
-            codex_confirm_env_update
-            if (codex_confirm_env_update is defined)
-            else (codex_settings.confirm_codex_env_update | default(false))
-          }}
+        codex_confirm_config_update_effective: "{{ codex_confirm_config_update | default(true) }}"
+        codex_confirm_env_update_effective: "{{ codex_confirm_env_update | default(true) }}"
         codex_settings_effective: >-
           {{
             codex_settings

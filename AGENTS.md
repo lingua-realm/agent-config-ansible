@@ -128,6 +128,8 @@ tmps/                          # 本地执行时的默认备份和日志目录
 
 - 顶层 playbook 会显式 `include_vars: dir={{ inventory_dir }}/group_vars/all` 递归加载嵌套变量目录。
 - 新增或调整 inventory 变量时，优先在 playbook `pre_tasks` 中完成兼容映射、默认值推导和结构校验，不要把复杂归一化逻辑塞进 role 内部模板。
+- **变量归一化应保持简洁**：避免冗余的三目分支（如 `var if defined else settings.xxx`）。检查 `settings` 对象中的后备字段是否实际使用；如果未使用，应简化为 `var | default(value)` 直接引用顶层变量。
+- **安全字段默认值**：影响配置变更的字段（如 `confirm`）默认值应为 `true`，无人值守场景通过 `-e` 显式覆盖为 `false`。
 
 ### 2. role 结构要保持按职责拆分
 
@@ -170,7 +172,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `.github/workflows/ci.yml` 会在每次 `push` 时触发，先对 6 个入口 playbook 做 `--syntax-check`，再用 matrix 分别执行 `claude_code`、`codex`、`gemini_cli`、`copilot_cli`、`cursor`，并在每个矩阵实例后执行 `setup_agent_skills.yml`。
 - CI 当前固定使用 `inventory/default/inventory.yml` 的 localhost 配置，不会自动切换到其他 profile。
 - 当前 CI 依赖的 Repository Secrets 只有 `VOLCES_API_KEY` 和 `PPIO_API_KEY`。
-- CI 会通过 extra vars 显式关闭这些确认项：
+- CI 会通过 extra vars 显式设置这些确认项为 `false` 以实现无人值守：
   - `claude_code_confirm_settings_update`
   - `claude_code_confirm_user_json_update`
   - `copilot_cli_confirm_mcp_config_update`
@@ -179,7 +181,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
   - `codex_confirm_env_update`
   - `gemini_confirm_settings_update`
   - `gemini_confirm_env_update`
-    并将 `cursor_require_agent_cli` 设为 `false`。
+  默认情况下这些确认项均为 `true`，用于防止意外覆盖用户配置。
 - 升级仓库时，建议先更新代码和依赖，再阅读 `README.md`、根目录 `AGENTS.md` 以及 `inventory/default/` 下的默认示例变化，然后先做 `--syntax-check`，最后只对需要的工具和小范围目标执行。
 
 ## 测试策略

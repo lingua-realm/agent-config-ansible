@@ -15,6 +15,28 @@
 
 ## 快速开始
 
+### 0. 准备仓库
+
+先克隆仓库到本地：
+
+```bash
+# 克隆上游仓库
+git clone git@github.com/lingua-realm:agent-config-ansible.git
+
+# 修改remote源为upstream，方便后续拉取更新
+git remote rename origin upstream
+
+# 创建一个自己的私有git仓库，用于后续创建自己的分支和提交自己的配置
+GITHUB_USERNAME=$(gh api user --jq .login)
+gh repo create $GITHUB_USERNAME/agent-config-ansible --private --source=. --remote=origin
+
+# 创建并切换到自己的分支，后续提交都在这个分支上
+git checkout -b private-config
+
+# 推送到自己的远程仓库
+git push -u origin private-config
+```
+
 ### 1. 安装依赖
 
 ```bash

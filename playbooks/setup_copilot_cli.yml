@@ -187,7 +187,7 @@
         agent_copilot_cli_copilot_auto_install_npm: "{{ copilot_cli_auto_install_npm | default('@github/copilot') }}"
         agent_copilot_cli_manage_mcp_config: "{{ copilot_cli_manage_mcp_config | default(true) | bool }}"
         agent_copilot_cli_run_verify: "{{ copilot_cli_run_verify | default(true) | bool }}"
-        agent_copilot_cli_confirm_mcp_config_update: "{{ copilot_cli_confirm_mcp_config_update | default(false) | bool }}"
+        agent_copilot_cli_confirm_mcp_config_update: "{{ copilot_cli_confirm_mcp_config_update | default(true) | bool }}"
         agent_copilot_cli_backup: "{{ copilot_cli_backup | default(true) | bool }}"
         agent_copilot_cli_backup_root: "{{ copilot_cli_backup_root_effective }}"
         agent_copilot_cli_mcp_config:
