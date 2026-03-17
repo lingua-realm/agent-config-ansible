@@ -135,6 +135,18 @@
               else ''
             )
           }}
+        codex_confirm_config_update_effective: >-
+          {{
+            codex_confirm_config_update
+            if (codex_confirm_config_update is defined)
+            else (codex_settings.confirm_codex_config_update | default(false))
+          }}
+        codex_confirm_env_update_effective: >-
+          {{
+            codex_confirm_env_update
+            if (codex_confirm_env_update is defined)
+            else (codex_settings.confirm_codex_env_update | default(false))
+          }}
         codex_settings_effective: >-
           {{
             codex_settings
@@ -202,8 +214,8 @@
         agent_codex_manage_env: "{{ codex_manage_env | default(codex_env_effective | length > 0) | bool }}"
         agent_codex_manage_agents_md: "{{ codex_manage_agents_md | default(true) | bool }}"
         agent_codex_run_verify: "{{ codex_run_verify | default(true) | bool }}"
-        agent_codex_confirm_config_update: "{{ codex_settings.confirm_codex_config_update | default(false) | bool }}"
-        agent_codex_confirm_env_update: "{{ codex_settings.confirm_codex_env_update | default(false) | bool }}"
+        agent_codex_confirm_config_update: "{{ codex_confirm_config_update_effective | bool }}"
+        agent_codex_confirm_env_update: "{{ codex_confirm_env_update_effective | bool }}"
         agent_codex_backup: "{{ codex_backup | default(true) | bool }}"
         agent_codex_backup_root: "{{ codex_backup_root_effective }}"
         agent_codex_config: "{{ codex_config_effective }}"

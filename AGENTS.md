@@ -98,13 +98,13 @@ playbooks/                     # 顶层入口
 roles/                         # 所有 Ansible roles
 inventory/default/             # 默认 inventory 示例
 inventory/default/group_vars/all/
-  ├── agent_mcps/              # Claude / Codex / Copilot 共享 MCP 默认值
+  ├── agent_mcps/              # Claude / Codex / Copilot / Cursor 共享 MCP 默认值
   ├── agent_skills/            # skills CLI 与条目声明
-  ├── claude_code/             # Claude Code 设置、模型、备份、MCP 覆盖
-  ├── codex/                   # Codex 设置、模型、备份、MCP 覆盖
-  ├── gemini_cli/              # Gemini CLI 设置、模型、备份、MCP 覆盖
-  ├── copilot_cli/             # Copilot CLI 设置、备份、MCP 覆盖
-  ├── cursor/                  # Cursor 设置、备份、MCP 覆盖
+  ├── claude_code/             # Claude Code 设置、模型、MCP 覆盖
+  ├── codex/                   # Codex 设置、模型、MCP 覆盖
+  ├── gemini_cli/              # Gemini CLI 设置、模型、MCP 覆盖
+  ├── copilot_cli/             # Copilot CLI 设置、MCP 覆盖
+  ├── cursor/                  # Cursor 设置、MCP 覆盖
   └── secrets.yml              # inventory 级敏感信息
 inventory/default/claude_assets/
 inventory/default/codex_assets/
@@ -117,6 +117,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 
 - 把 `inventory/default/` 当作模板，而不是长期直接修改的唯一环境；推荐复制出自己的 `inventory/<profile>/`。
 - 需要显式切换 profile 时，优先使用 `scripts/run-playbook.sh <profile> <playbook>`，而不是手动维护 `ANSIBLE_INVENTORY`。
+- `confirm`、备份目录、CLI 检查、自动安装、`manage_*`、`run_verify` 等运行控制默认已内置；默认示例 inventory 只保留真正影响输出内容的变量。
 - 通用 MCP 默认值维护在 `group_vars/all/agent_mcps/servers.yml`，只有某个 agent 需要特殊行为时，才写到各自的 `mcp_servers.yml`。
 - `CLAUDE.md`、`AGENTS.md`、`GEMINI.md`、skills 源目录这类可同步资产和 `secrets.yml` 这类敏感信息要分开维护。
 - 先对单个工具或单台主机验证，再扩大到 `target_hosts=all`；本地执行时优先检查 `tmps/` 下的备份结果。
@@ -168,12 +169,14 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - CI 当前固定使用 `inventory/default/inventory.yml` 的 localhost 配置，不会自动切换到其他 profile。
 - 当前 CI 依赖的 Repository Secrets 只有 `VOLCES_API_KEY` 和 `PPIO_API_KEY`。
 - CI 会通过 extra vars 显式关闭这些确认项：
-  - `claude_code_settings.confirm_settings_update`、
-  - `claude_code_dot_claude_json_merge.confirm_claude_json_update`
+  - `claude_code_confirm_settings_update`
+  - `claude_code_confirm_user_json_update`
   - `copilot_cli_confirm_mcp_config_update`
   - `cursor_confirm_mcp_config_update`
-  - `codex_settings.confirm_codex_config_update`
-  - `codex_settings.confirm_codex_env_update`
+  - `codex_confirm_config_update`
+  - `codex_confirm_env_update`
+  - `gemini_confirm_settings_update`
+  - `gemini_confirm_env_update`
     并将 `cursor_require_agent_cli` 设为 `false`。
 - 升级仓库时，建议先更新代码和依赖，再阅读 `README.md`、根目录 `AGENTS.md` 以及 `inventory/default/` 下的默认示例变化，然后先做 `--syntax-check`，最后只对需要的工具和小范围目标执行。
 

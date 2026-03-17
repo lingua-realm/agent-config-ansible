@@ -13,7 +13,6 @@
 #
 # 默认变量目录：
 #   inventory/<profile>/group_vars/all/copilot_cli/
-#     - backup.yml
 #     - settings.yml
 #     - mcp_servers.yml
 #

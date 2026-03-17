@@ -3,10 +3,11 @@
 # 仅覆盖声明的 key，未声明的保持原样
 # 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
 # 如需仅对 Claude Code 覆盖或补充某个服务，可在下方 mcpServers 中声明同名项。
+# 用户 JSON 同步前是否确认由顶层变量 `claude_code_confirm_user_json_update` 控制，
+# 默认无需在 inventory 示例中重复声明。
 #
 # 变量结构：
 #   claude_code_dot_claude_json_merge:
-#     confirm_claude_json_update: bool  # 同步前是否需要人工确认
 #     mcpServers:                       # MCP 服务器配置（字典格式）
 #       <server-name>:
 #         type: "stdio" | "http"
@@ -17,8 +18,5 @@
 #         headers: {...}               # http 类型（可选）
 
 claude_code_dot_claude_json_merge:
-  # 同步前如果存在配置变更，是否需要人工确认
-  confirm_claude_json_update: true
-
   # 仅放 Claude Code 特有的 MCP 覆盖项；默认共享配置由 agent_mcps 注入
   mcpServers: {}

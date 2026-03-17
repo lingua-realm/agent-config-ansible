@@ -50,6 +50,7 @@ inventory/<profile>/
 - 共享 MCP 默认值放在 `group_vars/all/agent_mcps/servers.yml`。
 - 某个工具的差异化配置放在对应目录下的 `mcp_servers.yml`。
 - API Key、token 等敏感信息放在 `group_vars/all/secrets.yml` 或 CI Secret，不要写进说明资产。
+- `confirm`、备份目录、CLI 检查、自动安装、`manage_*`、`run_verify` 这类运行控制默认已内置，只有需要覆盖时再显式声明。
 
 > 仓库根目录的 `AGENTS.md` 是给本仓库维护者和 AI 代理看的；`inventory/<profile>/codex_assets/AGENTS.md` 是要同步到目标机的 Codex 指令文件，两者不是同一个文件。
 

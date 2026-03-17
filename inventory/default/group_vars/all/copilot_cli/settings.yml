@@ -1,19 +1,8 @@
 # GitHub Copilot CLI 相关设置
 # 当前仅管理 ~/.copilot/mcp-config.json，用于 Copilot CLI 的 MCP 扩展能力。
 # 详细说明请参考官方文档：https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers
-
-# 是否在更新 mcp-config.json 前要求人工确认（true/false）
-copilot_cli_confirm_mcp_config_update: true
-
-# 是否要求 Copilot CLI 可用
-copilot_cli_require_cli: true
-
-# Copilot CLI 不存在时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
-copilot_cli_auto_install_npm: "@github/copilot"
-
-# 是否管理 mcp-config.json 以及执行最终验证
-copilot_cli_manage_mcp_config: true
-copilot_cli_run_verify: true
+# 交互确认、备份目录、CLI 检查、自动安装、manage/run_verify 等运行控制默认已内置；
+# 这里只保留真正影响 mcp-config.json 内容的示例变量。
 
 # Copilot CLI 在未显式指定 tools 时的默认工具白名单
 copilot_cli_default_tools:

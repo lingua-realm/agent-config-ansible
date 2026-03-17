@@ -1,12 +1,10 @@
 # Claude Code 相关设置
 # 这些设置会被转换成 settings.json 的内容，供 Claude Code 使用
 # 详细配置项说明请参考官方文档：https://code.claude.com/docs/en/settings
+# 交互确认、备份目录、CLI 检查、自动安装、manage/run_verify 等运行控制默认已内置；
+# 只有需要覆盖时，才在 profile 中额外声明对应顶层变量。
 
 claude_code_settings:
-  # ===== 部署配置 =====
-  # 是否在更新 settings.json 前要求人工确认（true/false）
-  confirm_settings_update: true
-
   # ===== 模型配置 =====
   model: "opus"
 

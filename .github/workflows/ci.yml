@@ -91,32 +91,30 @@ jobs:
               return yaml.safe_load((repo_root / relative_path).read_text(encoding="utf-8"))
 
           claude_settings = load_yaml("inventory/default/group_vars/all/claude_code/settings.yml")["claude_code_settings"]
-          claude_settings["confirm_settings_update"] = False
 
           claude_user_json = load_yaml("inventory/default/group_vars/all/claude_code/mcp_servers.yml")[
               "claude_code_dot_claude_json_merge"
           ]
-          claude_user_json["confirm_claude_json_update"] = False
 
           codex_settings = load_yaml("inventory/default/group_vars/all/codex/settings.yml")["codex_settings"]
-          codex_settings["confirm_codex_config_update"] = False
-          codex_settings["confirm_codex_env_update"] = False
 
           claude_code_verify_schema = True
-          gemini_confirm_settings_update = False
-          gemini_confirm_env_update = False
           gemini_verify_schema = True
 
           extra_vars = {
               "claude_code_settings": claude_settings,
               "claude_code_dot_claude_json_merge": claude_user_json,
+              "claude_code_confirm_settings_update": False,
+              "claude_code_confirm_user_json_update": False,
               "claude_code_verify_schema": claude_code_verify_schema,
               "copilot_cli_confirm_mcp_config_update": False,
+              "codex_settings": codex_settings,
+              "codex_confirm_config_update": False,
+              "codex_confirm_env_update": False,
               "cursor_confirm_mcp_config_update": False,
               "cursor_require_agent_cli": False,
-              "codex_settings": codex_settings,
-              "gemini_confirm_settings_update": gemini_confirm_settings_update,
-              "gemini_confirm_env_update": gemini_confirm_env_update,
+              "gemini_confirm_settings_update": False,
+              "gemini_confirm_env_update": False,
               "gemini_verify_schema": gemini_verify_schema,
           }
 
