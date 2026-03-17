@@ -64,6 +64,20 @@ agent_skills_items:
       - codex
       - github-copilot
     scope: global
+
+  - name: 安装 jkeskikangas/skills 的 AGENTS.md 管理技能
+    state: present
+    source: jkeskikangas/skills
+    skills:
+      - writing-agents-md # 生成和维护 AGENTS.md / CLAUDE.md，支持从当前会话反思并渐进式改进
+    agents:
+      - claude-code
+      - codex
+      - gemini-cli
+      - github-copilot
+      - cursor
+      - opencode
+    scope: global
 #
 #   - name: 卸载 Claude 遗留 skill
 #     state: absent
