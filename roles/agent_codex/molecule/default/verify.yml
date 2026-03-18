@@ -83,7 +83,7 @@
           - (agent_codex_config_final.stdout | from_json).mcp_servers.fetch.args == ['mcp-server-fetch']
           - (agent_codex_config_final.stdout | from_json).mcp_servers.deepwiki.url == 'https://mcp.deepwiki.com/mcp'
           - >-
-            (agent_codex_config_final.stdout | from_json).projects['/tmp/agent-codex/default/workspace'].trust_level
+            ((agent_codex_config_final.stdout | from_json).get('projects', {})).get('/tmp/agent-codex/default/workspace', {}).get('trust_level')
             == 'trusted'
           - (agent_codex_config_final.stdout | from_json).profile is not defined
           - >-
