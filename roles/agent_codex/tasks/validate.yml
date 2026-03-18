@@ -70,7 +70,7 @@
   when:
     - agent_codex_manage_config | bool
     - agent_codex_existing_projects_parse is defined
-    - agent_codex_existing_projects_parse.rc == 0
+    - (agent_codex_existing_projects_parse.rc | default(-1)) == 0
     - agent_codex_existing_projects_parse.stdout | trim | length > 0
 
 - name: 初始化现有 config.toml 中的本地 projects 配置
@@ -111,7 +111,7 @@
   when:
     - agent_codex_manage_config | bool
     - agent_codex_existing_projects_parse is defined
-    - agent_codex_existing_projects_parse.rc != 0
+    - (agent_codex_existing_projects_parse.rc | default(-1)) != 0
     - (agent_codex_existing_projects_parse.stderr | default('') | trim | length) > 0
 
 - name: 校验归一化后的 Codex 配置
