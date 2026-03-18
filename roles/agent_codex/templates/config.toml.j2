@@ -3,7 +3,21 @@
 # 模板来源：roles/agent_codex/templates/config.toml.j2
 
 {% macro render_scalar(value) -%}
-{{ value | to_json }}
+{{- value | to_json -}}
+{%- endmacro %}
+
+{% macro render_key(key) -%}
+{%- if key is string and (key is match('^[A-Za-z0-9_-]+$')) -%}
+{{- key -}}
+{%- else -%}
+{{- key | to_json -}}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro render_path(path) -%}
+{%- for segment in path -%}
+{%- if not loop.first %}.{% endif -%}{{ render_key(segment) }}
+{%- endfor -%}
 {%- endmacro %}
 
 {% macro render_table(path, table) -%}
@@ -11,7 +25,7 @@
 {% set key = item.0 %}
 {% set value = item.1 %}
 {% if value is not none and value is not mapping and (value is not string or value | length > 0) %}
-{{ key }} = {{ render_scalar(value) }}
+{{ render_key(key) }} = {{ render_scalar(value) }}
 {% endif %}
 {% endfor %}
 {% for item in table | dictsort %}
@@ -19,7 +33,7 @@
 {% set value = item.1 %}
 {% if value is mapping and value | length > 0 %}
 
-[{{ (path + [key]) | join('.') }}]
+[{{ render_path(path + [key]) }}]
 {{ render_table(path + [key], value) }}
 {% endif %}
 {% endfor %}

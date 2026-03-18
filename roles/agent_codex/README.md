@@ -116,6 +116,7 @@ agent_codex_result:
 ## 说明
 
 - `config.toml` 使用通用 TOML 模板递归渲染：标量、数组和嵌套对象都会映射成对应的 TOML 键或表。
+- 如果目标端现有 `config.toml` 无法解析（例如 TOML 被手工改坏，或目标端 Python < 3.11 缺少 `tomllib`），role 会直接失败并保留原文件，避免覆盖已有本地 `[projects]` 信任状态。
 - `agent_codex_manage_env: true` 且 `agent_codex_env` 为空时，会自动跳过 `.env` 同步，不会生成空文件。
 - `agent_codex_confirm_config_update` 和 `agent_codex_confirm_env_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
 - 设置 `agent_codex_backup_root` 后，`config.toml`、`.env` 和 `AGENTS.md` 的备份会分别写入其下的 `config/`、`env/`、`agents-md/` 子目录。

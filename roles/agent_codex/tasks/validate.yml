@@ -35,6 +35,92 @@
     agent_codex_env_normalized: "{{ agent_codex_env | default({}) }}"
   changed_when: false
 
+- name: 检查现有 config.toml 是否存在
+  stat:
+    path: "{{ agent_codex_config_path }}"
+  register: agent_codex_existing_config_stat
+  when: agent_codex_manage_config | bool
+
+- name: 解析现有 config.toml 中的本地 projects 配置
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - |
+        import json, pathlib, sys
+        try:
+            import tomllib
+        except ImportError as exc:
+            print(f'tomllib module unavailable, cannot proceed with existing config.toml management: {exc}', file=sys.stderr)
+            raise SystemExit(1)
+        try:
+            data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+        except Exception as exc:
+            print(f'failed to parse existing config.toml: {exc}', file=sys.stderr)
+            raise SystemExit(1)
+        print(json.dumps(data.get('projects', {}), ensure_ascii=False))
+      - "{{ agent_codex_config_path }}"
+  register: agent_codex_existing_projects_parse
+  changed_when: false
+  failed_when: false
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_config_stat.stat.exists
+    - agent_codex_existing_config_stat.stat.isreg
+
+- name: 阻止覆盖无法解析的现有 config.toml
+  fail:
+    msg: >-
+      检测到现有 config.toml 无法解析，已停止本次 config.toml 托管以避免覆盖本地 projects 信任状态。
+      诊断信息：{{ agent_codex_existing_projects_parse.stderr | default('') | trim }}
+      处理建议：请先修复 TOML 格式，或确保目标端 Python >= 3.11（内置 tomllib），然后重试。
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_projects_parse is defined
+    - (agent_codex_existing_projects_parse.rc | default(-1)) != 0
+    - agent_codex_existing_config_stat.stat.exists
+    - agent_codex_existing_config_stat.stat.isreg
+
+- name: 归一化现有 config.toml 中的本地 projects 配置
+  set_fact:
+    agent_codex_existing_projects: "{{ agent_codex_existing_projects_parse.stdout | trim | from_json }}"
+  changed_when: false
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_projects_parse is defined
+    - (agent_codex_existing_projects_parse.rc | default(-1)) == 0
+    - agent_codex_existing_projects_parse.stdout | trim | length > 0
+
+- name: 初始化现有 config.toml 中的本地 projects 配置
+  set_fact:
+    agent_codex_existing_projects: {}
+  changed_when: false
+  when: agent_codex_existing_projects is not defined
+
+- name: 保留现有 config.toml 中的本地 projects 配置
+  set_fact:
+    agent_codex_config_normalized: >-
+      {{
+        agent_codex_config_normalized
+        | combine(
+            {
+              'projects': (
+                (agent_codex_config_normalized.projects | default({}))
+                | combine(
+                    agent_codex_existing_projects,
+                    recursive=True,
+                    list_merge='replace'
+                  )
+              )
+            },
+            recursive=True
+          )
+      }}
+  changed_when: false
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_projects | length > 0 or (agent_codex_config_normalized.projects | default({}) | length > 0)
+
 - name: 校验归一化后的 Codex 配置
   assert:
     that:
