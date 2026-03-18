@@ -11,7 +11,7 @@ provisioner:
   name: ansible
   config_options:
     defaults:
-      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+      roles_path: $PWD/../../roles
 scenario:
   test_sequence:
     - dependency
