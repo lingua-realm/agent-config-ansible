@@ -50,8 +50,8 @@
         import json, pathlib, sys
         try:
             import tomllib
-        except Exception as exc:
-            print(f'failed to parse existing config.toml: tomllib unavailable: {exc}', file=sys.stderr)
+        except ImportError as exc:
+            print(f'tomllib module unavailable, cannot validate existing config.toml: {exc}', file=sys.stderr)
             raise SystemExit(1)
         try:
             data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
@@ -72,8 +72,8 @@
   fail:
     msg: >-
       检测到现有 config.toml 无法解析，已停止本次 config.toml 托管以避免覆盖本地 projects 信任状态。
-      请先修复 TOML 格式或确保目标端 Python >= 3.11（内置 tomllib），然后重试。
-      {{ agent_codex_existing_projects_parse.stderr | default('') | trim }}
+      诊断信息：{{ agent_codex_existing_projects_parse.stderr | default('') | trim }}
+      处理建议：请先修复 TOML 格式，或确保目标端 Python >= 3.11（内置 tomllib），然后重试。
   when:
     - agent_codex_manage_config | bool
     - agent_codex_existing_projects_parse is defined
