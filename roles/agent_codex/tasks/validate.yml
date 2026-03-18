@@ -35,6 +35,69 @@
     agent_codex_env_normalized: "{{ agent_codex_env | default({}) }}"
   changed_when: false
 
+- name: 检查现有 config.toml 是否存在
+  stat:
+    path: "{{ agent_codex_config_path }}"
+  register: agent_codex_existing_config_stat
+  when: agent_codex_manage_config | bool
+
+- name: 解析现有 config.toml 中的本地 projects 配置
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - >-
+        import json, pathlib, sys, tomllib;
+        data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'));
+        print(json.dumps(data.get('projects', {}), ensure_ascii=False))
+      - "{{ agent_codex_config_path }}"
+  register: agent_codex_existing_projects_parse
+  changed_when: false
+  failed_when: false
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_config_stat.stat.exists
+    - agent_codex_existing_config_stat.stat.isreg
+
+- name: 保留现有 config.toml 中的本地 projects 配置
+  set_fact:
+    agent_codex_config_normalized: >-
+      {{
+        agent_codex_config_normalized
+        | combine(
+            {
+              'projects': (
+                (
+                  (agent_codex_existing_projects_parse.stdout | default('{}'))
+                  | from_json
+                )
+                | combine(
+                    agent_codex_config_normalized.projects | default({}),
+                    recursive=True,
+                    list_merge='replace'
+                  )
+              )
+            },
+            recursive=True
+          )
+      }}
+  changed_when: false
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_projects_parse is defined
+    - agent_codex_existing_projects_parse.rc == 0
+
+- name: 提示跳过保留现有 projects 配置
+  debug:
+    msg: >-
+      检测到现有 config.toml 无法解析，跳过保留本地 projects 段：
+      {{ agent_codex_existing_projects_parse.stderr | default('') | trim }}
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_projects_parse is defined
+    - agent_codex_existing_projects_parse.rc != 0
+    - (agent_codex_existing_projects_parse.stderr | default('') | trim | length) > 0
+
 - name: 校验归一化后的 Codex 配置
   assert:
     that:

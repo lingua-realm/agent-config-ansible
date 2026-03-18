@@ -82,9 +82,15 @@
           - (agent_codex_config_final.stdout | from_json).mcp_servers.context7.command == 'npx'
           - (agent_codex_config_final.stdout | from_json).mcp_servers.fetch.args == ['mcp-server-fetch']
           - (agent_codex_config_final.stdout | from_json).mcp_servers.deepwiki.url == 'https://mcp.deepwiki.com/mcp'
+          - >-
+            (agent_codex_config_final.stdout | from_json).projects['/tmp/agent-codex/default/workspace'].trust_level
+            == 'trusted'
           - (agent_codex_config_final.stdout | from_json).profile is not defined
           - >-
             'profile = ""' not in (agent_codex_config_text_final.content | b64decode)
+          - >-
+            '[projects."/tmp/agent-codex/default/workspace"]'
+            in (agent_codex_config_text_final.content | b64decode)
           - >-
             'PPIO_API_KEY="test-key"' in (agent_codex_env_final.content | b64decode)
           - agent_codex_agents_md_final.stat.exists

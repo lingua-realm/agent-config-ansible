@@ -35,6 +35,9 @@
         content: |
           model = "legacy-model"
           model_provider = "legacy"
+
+          [projects."/tmp/agent-codex/default/workspace"]
+          trust_level = "trusted"
         mode: "0644"
       tags:
         - molecule-idempotence-notest

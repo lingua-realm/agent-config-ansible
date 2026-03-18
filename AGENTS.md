@@ -161,6 +161,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - Claude Code 的模型配置位于 `inventory/default/group_vars/all/claude_code/models.yml`，包含 `private_variables`、`claude_code_model_configs`（每项含 `base_url`、`api_key`、`model`）和 `claude_code_use_model`（默认模型键名）。
 - API key 通过 Jinja2 模板引用 secrets：`{{ (secrets | default({})).get('api_keys', {}).get('<provider>', '') }}`，无需硬编码。
 - `setup_codex.yml` 会把 `codex/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `codex/mcp_servers.yml` 归一化成单个 `agent_codex_config` / `agent_codex_env` 输入。
+- `agent_codex` 会保留目标机现有 `~/.codex/config.toml` 里的 `[projects]` 本地信任状态，避免 Codex CLI 写入的本地目录路径造成托管漂移；这些路径不需要入 inventory。
 - `setup_gemini_cli.yml` 会把 `gemini_cli/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `gemini_cli/mcp_servers.yml` 归一化成单个 `agent_gemini_cli_settings` / `agent_gemini_cli_env` 输入。
 - `setup_copilot_cli.yml` 当前只管理 `~/.copilot/mcp-config.json`，不负责 Copilot CLI 账号、模型或其他偏好设置。
 - `setup_cursor.yml` 当前只管理 `~/.cursor/mcp.json`，供 Cursor 编辑器与 Cursor Agent CLI 共享使用，不负责账号、模型或其他偏好设置。

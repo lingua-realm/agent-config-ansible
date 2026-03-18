@@ -73,6 +73,7 @@ inventory/<profile>/
 - 某个工具的差异化配置放在对应目录下的 `mcp_servers.yml`。
 - API Key、token 等敏感信息放在 `group_vars/all/secrets.yml` 或 CI Secret，不要写进说明资产。
 - `confirm`、备份目录、CLI 检查、自动安装、`manage_*`、`run_verify` 这类运行控制默认已内置，只有需要覆盖时再显式声明。
+- Codex CLI 会把本地信任目录写进 `~/.codex/config.toml` 的 `[projects]` 段；`setup_codex.yml` 会保留目标机现有的本地 `projects` 状态，避免这些路径造成声明式配置漂移，因此无需把它们写进 inventory。
 
 > 仓库根目录的 `AGENTS.md` 是给本仓库维护者和 AI 代理看的；`inventory/<profile>/codex_assets/AGENTS.md` 是要同步到目标机的 Codex 指令文件，两者不是同一个文件。
 
