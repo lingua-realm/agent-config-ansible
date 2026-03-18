@@ -11,7 +11,7 @@ provisioner:
   name: ansible
   config_options:
     defaults:
-      roles_path: /home/zzq/code/repo/lingua-realm/agent-config-ansible/roles
+      roles_path: $PWD/../../roles
       remote_tmp: /tmp/.ansible/tmp
 scenario:
   test_sequence:
