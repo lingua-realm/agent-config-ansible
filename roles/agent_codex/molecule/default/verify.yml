@@ -96,3 +96,73 @@
           - agent_codex_agents_md_final.stat.exists
         fail_msg: "agent_codex 场景验证失败"
         success_msg: "✓ agent_codex 场景通过"
+
+    - name: 准备无法解析旧配置的测试目录
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - /tmp/agent-codex/parse-failure
+        - /tmp/agent-codex/parse-failure/home
+        - /tmp/agent-codex/parse-failure/home/.codex
+
+    - name: 准备无法解析的旧 config.toml
+      copy:
+        dest: /tmp/agent-codex/parse-failure/home/.codex/config.toml
+        content: |
+          model = "legacy-model"
+          [projects."/tmp/agent-codex/parse-failure/workspace"
+          trust_level = "trusted"
+        mode: "0644"
+
+    - name: 读取无法解析的旧 config.toml
+      slurp:
+        src: /tmp/agent-codex/parse-failure/home/.codex/config.toml
+      register: agent_codex_invalid_config_before
+
+    - name: 执行无法解析旧配置的保护检查
+      block:
+        - name: 对无法解析的旧 config.toml 执行 agent_codex 角色
+          include_role:
+            name: agent_codex
+          vars:
+            agent_codex_home_dir: /tmp/agent-codex/parse-failure/home/.codex
+            agent_codex_config_path: /tmp/agent-codex/parse-failure/home/.codex/config.toml
+            agent_codex_env_path: /tmp/agent-codex/parse-failure/home/.codex/.env
+            agent_codex_agents_md_path: /tmp/agent-codex/parse-failure/home/.codex/AGENTS.md
+            agent_codex_temp_root: /tmp/agent-codex/parse-failure/tmp
+            agent_codex_require_codex_cli: false
+            agent_codex_manage_env: false
+            agent_codex_manage_agents_md: false
+            agent_codex_run_verify: false
+            agent_codex_confirm_config_update: false
+            agent_codex_backup: false
+            agent_codex_config:
+              model_provider: ppio
+              model: pa/gpt-5.4
+              sandbox_mode: read-only
+        - name: 标记无法解析旧配置未触发保护失败
+          set_fact:
+            agent_codex_invalid_config_protected: false
+      rescue:
+        - name: 记录无法解析旧配置的保护失败结果
+          set_fact:
+            agent_codex_invalid_config_protected: true
+            agent_codex_invalid_config_failure: "{{ ansible_failed_result }}"
+
+    - name: 读取失败后的旧 config.toml
+      slurp:
+        src: /tmp/agent-codex/parse-failure/home/.codex/config.toml
+      register: agent_codex_invalid_config_after
+
+    - name: 断言无法解析的旧 config.toml 不会被覆盖
+      assert:
+        that:
+          - agent_codex_invalid_config_protected | bool
+          - >-
+            '已停止本次 config.toml 托管以避免覆盖本地 projects 信任状态'
+            in (agent_codex_invalid_config_failure.msg | default(''))
+          - agent_codex_invalid_config_after.content == agent_codex_invalid_config_before.content
+        fail_msg: "agent_codex 未正确保护无法解析的旧 config.toml"
+        success_msg: "✓ 无法解析的旧 config.toml 会阻止覆盖"

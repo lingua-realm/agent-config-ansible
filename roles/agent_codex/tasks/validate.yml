@@ -47,7 +47,12 @@
       - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
       - -c
       - |
-        import json, pathlib, sys, tomllib
+        import json, pathlib, sys
+        try:
+            import tomllib
+        except Exception as exc:
+            print(f'failed to parse existing config.toml: tomllib unavailable: {exc}', file=sys.stderr)
+            raise SystemExit(1)
         try:
             data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
         except Exception as exc:
@@ -60,6 +65,19 @@
   failed_when: false
   when:
     - agent_codex_manage_config | bool
+    - agent_codex_existing_config_stat.stat.exists
+    - agent_codex_existing_config_stat.stat.isreg
+
+- name: 阻止覆盖无法解析的现有 config.toml
+  fail:
+    msg: >-
+      检测到现有 config.toml 无法解析，已停止本次 config.toml 托管以避免覆盖本地 projects 信任状态。
+      请先修复 TOML 格式或确保目标端 Python >= 3.11（内置 tomllib），然后重试。
+      {{ agent_codex_existing_projects_parse.stderr | default('') | trim }}
+  when:
+    - agent_codex_manage_config | bool
+    - agent_codex_existing_projects_parse is defined
+    - (agent_codex_existing_projects_parse.rc | default(-1)) != 0
     - agent_codex_existing_config_stat.stat.exists
     - agent_codex_existing_config_stat.stat.isreg
 
@@ -102,17 +120,6 @@
   when:
     - agent_codex_manage_config | bool
     - agent_codex_existing_projects | length > 0 or (agent_codex_config_normalized.projects | default({}) | length > 0)
-
-- name: 提示跳过保留现有 projects 配置
-  debug:
-    msg: >-
-      检测到现有 config.toml 无法解析，跳过保留本地 projects 段：
-      {{ agent_codex_existing_projects_parse.stderr | default('') | trim }}
-  when:
-    - agent_codex_manage_config | bool
-    - agent_codex_existing_projects_parse is defined
-    - (agent_codex_existing_projects_parse.rc | default(-1)) != 0
-    - (agent_codex_existing_projects_parse.stderr | default('') | trim | length) > 0
 
 - name: 校验归一化后的 Codex 配置
   assert:
