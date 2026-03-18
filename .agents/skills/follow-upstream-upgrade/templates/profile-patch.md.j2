@@ -1,13 +1,27 @@
-# {{ profile }} Patch Draft
+# {{ profile }} 结构变更迁移补丁
 
-## Summary
+> 注意：此补丁仅反映上游模板的结构性变更。您的个性化配置差异不会出现在这里。
+
+## 变更概要
 
 {{ summary }}
 
-## Suggested Changes
+## 建议的迁移步骤
 
 {{ suggested_changes }}
 
-## Notes
+## 重要提醒
 
 {{ notes }}
+
+## 操作原则
+
+1. **不要直接覆盖**您的 `inventory/{{ profile }}/` 下的文件
+2. **仅当您的配置覆盖了已变更的 key** 时，才需要手动迁移
+3. **保持您的个性化值不变**，仅调整结构以匹配新模板
+4. 如有疑问，请先备份并小范围验证
+
+---
+
+**此补丁由 follow-upstream-upgrade 自动生成**
+生成逻辑：仅 upstream `inventory/default/` 的结构变更会触发此补丁。

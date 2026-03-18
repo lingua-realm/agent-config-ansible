@@ -1,17 +1,38 @@
-# Upgrade Report
+# 上游升级报告 (Schema-Focused)
 
-## Summary
+> 本报告仅关注**配置数据结构变更**，profile 个性化内容差异不会列出。
+
+## 摘要
 
 {{ summary }}
 
-## Impacted Tools
+## 是否需迁移
 
-{{ impacted_tools }}
+{% if has_schema_changes %}
+⚠️  **需要关注**：上游模板有结构性变更，请检查是否需要调整您的 profile 配置。
+{% else %}
+✅ **无需迁移**：上游模板未发生结构性配置变更。您的个性化配置（inventory/<profile>/）与模板的内容差异属于正常情况，无需处理。
+{% endif %}
 
-## Verification
+## 影响的工具
+
+{% if impacted_tools %}
+{{ impacted_tools | join(', ') }}
+{% else %}
+无（或仅文档变更）
+{% endif %}
+
+## 验证建议
 
 {{ verification }}
 
-## Next Steps
+## 下一步
 
 {{ next_steps }}
+
+---
+
+**重要提示**：
+- `inventory/<profile>/` 下的文件是您的**个性化配置**，与 `inventory/default/` 的差异**不会**在报告中列出。
+- 只有 `inventory/default/group_vars/all/` 下的结构变更才会触发迁移提醒。
+- 请保持 profile 配置的个性化，不要盲目同步默认模板的内容。

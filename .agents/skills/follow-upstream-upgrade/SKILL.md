@@ -29,6 +29,8 @@ This is a repository-specific upgrade skill for safely rehearsing upstream updat
 - Never modify `inventory/<profile>/` or assets directly.
 - Never run `target_hosts=all`.
 - Stop immediately on dirty working tree, merge conflicts, verification failures, blocking migrations, or local apply failures.
+- **Never report content differences between `inventory/<profile>/` and `inventory/default/`** - these are expected user customizations.
+- **Only report structural/schema changes** (key renames, type changes, nested structure migrations, required field additions) from upstream.
 
 ## Default Assumptions
 
