@@ -112,6 +112,7 @@
         dest: /tmp/agent-codex/parse-failure/home/.codex/config.toml
         content: |
           model = "legacy-model"
+          # Intentionally malformed TOML: missing closing ] for the table header.
           [projects."/tmp/agent-codex/parse-failure/workspace"
           trust_level = "trusted"
         mode: "0644"

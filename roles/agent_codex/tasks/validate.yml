@@ -51,7 +51,7 @@
         try:
             import tomllib
         except ImportError as exc:
-            print(f'tomllib module unavailable, cannot validate existing config.toml: {exc}', file=sys.stderr)
+            print(f'tomllib module unavailable, cannot proceed with existing config.toml management: {exc}', file=sys.stderr)
             raise SystemExit(1)
         try:
             data = tomllib.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
