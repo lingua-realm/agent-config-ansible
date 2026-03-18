@@ -110,6 +110,8 @@ inventory/default/claude_assets/
 inventory/default/codex_assets/
 inventory/default/gemini_assets/
 inventory/default/agent_skills_assets/
+.agents/skills/                # 仓库内项目级 skills 单一事实源
+.claude/skills -> ../.agents/skills
 tmps/                          # 本地执行时的默认备份和日志目录
 ```
 
@@ -184,6 +186,15 @@ tmps/                          # 本地执行时的默认备份和日志目录
   - `gemini_confirm_env_update`
   默认情况下这些确认项均为 `true`，用于防止意外覆盖用户配置。
 - 升级仓库时，建议先更新代码和依赖，再阅读 `README.md`、根目录 `AGENTS.md` 以及 `inventory/default/` 下的默认示例变化，然后先做 `--syntax-check`，最后只对需要的工具和小范围目标执行。
+
+## 仓库内升级 Skill
+
+- 仓库内项目级 skill 放在 `./.agents/skills/`，`./.claude/skills` 仅作为指向该目录的兼容软链接。
+- `follow-upstream-upgrade` 用于在本仓库中跟进 `upstream/main` 到 `private-config` 的升级演练。
+- 这个 skill 默认自动发现 `inventory/*/inventory.yml`，但排除 `inventory/default/`。
+- 这个 skill 可以执行 `fetch`、创建升级分支、merge、仓库级验证和本地小范围 apply。
+- 这个 skill 不自动 `commit`、不自动 `push`、不直接修改用户 profile 或资产文件。
+- 如果出现 merge 冲突、阻塞型 profile 迁移、验证失败或本地 apply 失败，skill 必须立即停下并保留现场。
 
 ## 测试策略
 

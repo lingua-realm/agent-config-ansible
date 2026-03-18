@@ -109,6 +109,12 @@ scripts/run-playbook.sh personal playbooks/setup_cursor.yml -e "target_hosts=all
 - 只改了某一个 agent，就只跑对应 playbook，没有必要每次全量执行。
 - 首次落地或大改前，先确认备份目录和目标输出是否符合预期。
 
+### 5. 项目级 skills
+
+- 仓库内项目级 skills 的单一事实源放在 `./.agents/skills/`。
+- 为兼容 Claude，`./.claude/skills` 会软链接到 `../.agents/skills`。
+- 当前内置了 `follow-upstream-upgrade`，用于在这个仓库里跟进 `upstream/main` 到 `private-config` 的本地升级演练；它默认不自动 `commit`、不自动 `push`、不直接修改用户 profile。
+
 ## 常用检查
 
 ```bash
