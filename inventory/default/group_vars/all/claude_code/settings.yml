@@ -41,7 +41,12 @@ claude_code_settings:
       - KillShell
       - NotebookEdit
       - Read
-      - Task
+      - TaskCreate
+      - TaskGet
+      - TaskList
+      - TaskOutput
+      - TaskStop
+      - TaskUpdate
       - TodoWrite
       - WebFetch
       # - WebSearch # 不要使用自带的联网搜索
