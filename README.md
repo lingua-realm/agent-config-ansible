@@ -127,4 +127,5 @@ uv run molecule test
 ## 更多说明
 
 - 仓库架构、变量归一化、CI、测试边界、升级注意事项见根目录 `AGENTS.md`。
+- 如果你在评估下一步还适合适配哪些工具，见 `docs/tool-adaptation-candidates.md`。
 - 更具体的变量示例和资产样例见 `inventory/default/`。
