@@ -5,6 +5,8 @@ import textwrap
 import unittest
 from pathlib import Path
 
+import yaml
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ANSIBLE_PLAYBOOK = REPO_ROOT / ".venv" / "bin" / "ansible-playbook"
@@ -38,6 +40,25 @@ class InventoryDefaultsStructureTests(unittest.TestCase):
 
         self.assertNotIn("confirm_settings_update", settings_text)
         self.assertNotIn("confirm_claude_json_update", user_json_text)
+
+    def test_claude_default_permissions_use_split_task_tools(self) -> None:
+        settings = yaml.safe_load(
+            (REPO_ROOT / "inventory/default/group_vars/all/claude_code/settings.yml").read_text(encoding="utf-8")
+        )
+
+        allow = settings["claude_code_settings"]["permissions"]["allow"]
+
+        self.assertNotIn("Task", allow)
+        self.assertTrue(
+            {
+                "TaskCreate",
+                "TaskGet",
+                "TaskList",
+                "TaskOutput",
+                "TaskStop",
+                "TaskUpdate",
+            }.issubset(set(allow))
+        )
 
     def test_gemini_settings_do_not_repeat_runtime_control_vars(self) -> None:
         text = (REPO_ROOT / "inventory/default/group_vars/all/gemini_cli/settings.yml").read_text(encoding="utf-8")
