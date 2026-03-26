@@ -6,17 +6,19 @@
 
 claude_code_settings:
   # ===== 模型配置 =====
-  model: "opus"
+  # 订阅模式下取 model 字段（如 opus/sonnet/haiku）；API Key 模式默认 opus
+  model: "{{ model_configs[claude_code_use_model].model if (model_configs[claude_code_use_model].auth | default('')) == 'subscription' else 'opus' }}"
 
   # ==== 开启深度思考模式 ====
   alwaysThinkingEnabled: true
   env:
-    ANTHROPIC_BASE_URL: "{{ model_configs[claude_code_use_model].base_url }}"
-    ANTHROPIC_API_KEY: "{{ model_configs[claude_code_use_model].api_key }}"
-    ANTHROPIC_DEFAULT_OPUS_MODEL: "{{ model_configs[claude_code_use_model].opus_model | default(model_configs[claude_code_use_model].model) }}"
-    ANTHROPIC_DEFAULT_SONNET_MODEL: "{{ model_configs[claude_code_use_model].sonnet_model | default(model_configs[claude_code_use_model].model) }}"
-    ANTHROPIC_DEFAULT_HAIKU_MODEL: "{{ model_configs[claude_code_use_model].haiku_model | default(model_configs[claude_code_use_model].model) }}"
-    CLAUDE_CODE_SUBAGENT_MODEL: "{{ model_configs[claude_code_use_model].claude_code_subagent | default(model_configs[claude_code_use_model].model) }}"
+    # 认证与模型覆盖（订阅模式下这些值为空，会被 playbook 过滤掉）
+    ANTHROPIC_BASE_URL: "{{ model_configs[claude_code_use_model].base_url | default('') }}"
+    ANTHROPIC_API_KEY: "{{ model_configs[claude_code_use_model].api_key | default('') }}"
+    ANTHROPIC_DEFAULT_OPUS_MODEL: "{{ model_configs[claude_code_use_model].opus_model | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
+    ANTHROPIC_DEFAULT_SONNET_MODEL: "{{ model_configs[claude_code_use_model].sonnet_model | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
+    ANTHROPIC_DEFAULT_HAIKU_MODEL: "{{ model_configs[claude_code_use_model].haiku_model | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
+    CLAUDE_CODE_SUBAGENT_MODEL: "{{ model_configs[claude_code_use_model].claude_code_subagent | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
     # 隐私与遥测控制
     DISABLE_TELEMETRY: "1"
     DISABLE_ERROR_REPORTING: "1"

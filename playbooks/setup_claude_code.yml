@@ -153,9 +153,15 @@
                   'enabledPlugins': (
                     claude_code_settings.enabledPlugins
                     | default(claude_code_settings.enabled_plugins | default([]))
+                  ),
+                  'env': (
+                    claude_code_settings.env | default({})
+                    | dict2items
+                    | rejectattr('value', 'equalto', '')
+                    | items2dict
                   )
                 },
-                recursive=True
+                recursive=False
               )
           }}
         claude_code_user_json_effective: >-
