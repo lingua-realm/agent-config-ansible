@@ -54,13 +54,13 @@ agent_mcps:
   # Figma 设计稿读取（第三方 figma-context-mcp，无官方额度限制）
   # 需要在 secrets.yml 中配置 secrets.api_keys.figma 为你的 Figma Personal Access Token
   # 获取方式: Figma → Settings → Account → Personal access tokens → Generate new token
-  figma-context-mcp:
-    type: "stdio"
-    command: "npx"
-    args: ["-y", "figma-developer-mcp", "--stdio"]
-    env:
-      FIGMA_API_KEY: "{{ (secrets | default({})).get('api_keys', {}).get('figma', '') }}"
-    startup_timeout_sec: 30
+  # figma-context-mcp:
+  #  type: "stdio"
+  #  command: "npx"
+  #  args: ["-y", "figma-developer-mcp", "--stdio"]
+  #  env:
+  #    FIGMA_API_KEY: "{{ (secrets | default({})).get('api_keys', {}).get('figma', '') }}"
+  #  startup_timeout_sec: 30
 
   # Serena 代码分析和重构
   serena:
