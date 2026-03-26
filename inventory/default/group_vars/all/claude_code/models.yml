@@ -21,4 +21,8 @@ claude_code_model_configs: # 模型配置
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('qiniu', '') }}"
     model: "stepfun/step-3.5-flash"
 
+  anthropic_subscription: # Anthropic 官方订阅账户（Pro/Max/Team），无需 API Key
+    auth: subscription
+    model: "opus" # 内置别名：opus / sonnet / haiku / opusplan / opus[1m] / sonnet[1m]
+
 claude_code_use_model: "qiniu_step_3_5_flash"
