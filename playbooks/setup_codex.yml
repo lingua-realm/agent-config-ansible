@@ -96,15 +96,31 @@
     - name: 归一化共享 Codex MCP 配置
       set_fact:
         codex_mcp_servers_effective: >-
+          {%- set _filtered_env = (
+                item.value.env | default({})
+                | dict2items
+                | rejectattr('value', 'equalto', '')
+                | items2dict
+              ) if (item.value.env is defined and item.value.env is mapping)
+              else {}
+          -%}
           {{
             codex_mcp_servers_effective
             | combine(
                 {
                   item.key: (
-                    item.value
-                    | dict2items
-                    | rejectattr('key', 'equalto', 'type')
-                    | items2dict
+                    (
+                      item.value
+                      | dict2items
+                      | rejectattr('key', 'equalto', 'type')
+                      | rejectattr('key', 'equalto', 'env')
+                      | rejectattr('value', 'equalto', {})
+                      | items2dict
+                    )
+                    | combine(
+                        (_filtered_env | length > 0)
+                        | ternary({'env': _filtered_env}, {})
+                      )
                   )
                 },
                 recursive=True
