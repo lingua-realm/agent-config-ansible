@@ -1,0 +1,64 @@
+---
+- name: Verify — OpenCommit CLI 自动化配置幂等
+  hosts: all
+  environment:
+    PATH: "{{ opencommit_cli_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    opencommit_cli_test_root: /tmp/opencommit-cli/default
+    opencommit_cli_fake_bin: "{{ opencommit_cli_test_root }}/fake-bin"
+    opencommit_cli_home_dir_test: "{{ opencommit_cli_test_root }}/home"
+  tasks:
+    - name: 再次执行 opencommit_cli 角色
+      include_role:
+        name: opencommit_cli
+      vars:
+        opencommit_cli_home_dir: "{{ opencommit_cli_home_dir_test }}"
+        opencommit_cli_temp_root: "{{ opencommit_cli_test_root }}/tmp"
+        opencommit_cli_confirm_config_update: false
+        opencommit_cli_config:
+          OCO_AI_PROVIDER: openai
+          OCO_API_URL: https://api.ppio.com/openai/v1
+          OCO_API_KEY: test-key
+          OCO_MODEL: pa/gpt-5.4
+          OCO_EMOJI: true
+          OCO_DESCRIPTION: false
+          OCO_LANGUAGE: zh-CN
+          OCO_API_CUSTOM_HEADERS:
+            X-Test: "yes"
+
+    - name: 解析最终 ~/.opencommit
+      command:
+        argv:
+          - python3
+          - -c
+          - |
+            import json, pathlib, sys
+            data = {}
+            for raw_line in pathlib.Path(sys.argv[1]).read_text(encoding='utf-8').splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                key, value = line.split('=', 1)
+                try:
+                    data[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    data[key] = value
+            print(json.dumps(data, ensure_ascii=False, sort_keys=True))
+          - "{{ opencommit_cli_home_dir_test }}/.opencommit"
+      register: opencommit_cli_config_final
+      changed_when: false
+
+    - name: 断言 OpenCommit CLI 结果
+      assert:
+        that:
+          - not (opencommit_cli_result.changed | bool)
+          - (opencommit_cli_config_final.stdout | from_json).OCO_AI_PROVIDER == 'openai'
+          - (opencommit_cli_config_final.stdout | from_json).OCO_API_URL == 'https://api.ppio.com/openai/v1'
+          - (opencommit_cli_config_final.stdout | from_json).OCO_API_KEY == 'test-key'
+          - (opencommit_cli_config_final.stdout | from_json).OCO_MODEL == 'pa/gpt-5.4'
+          - (opencommit_cli_config_final.stdout | from_json).OCO_EMOJI | bool
+          - not ((opencommit_cli_config_final.stdout | from_json).OCO_DESCRIPTION | bool)
+          - (opencommit_cli_config_final.stdout | from_json).OCO_LANGUAGE == 'zh-CN'
+          - (opencommit_cli_config_final.stdout | from_json).OCO_API_CUSTOM_HEADERS['X-Test'] == 'yes'
+        fail_msg: "opencommit_cli 场景验证失败"
+        success_msg: "✓ opencommit_cli 场景通过"

@@ -1,0 +1,19 @@
+---
+galaxy_info:
+  role_name: opencommit_cli
+  author: lingua-realm
+  description: 复用现有基础 role 自动管理 OpenCommit CLI 的 ~/.opencommit 配置
+  license: MIT
+  min_ansible_version: "2.9"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+    - name: macOS
+      versions:
+        - all
+
+dependencies: []

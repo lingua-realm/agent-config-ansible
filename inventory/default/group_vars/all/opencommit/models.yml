@@ -1,0 +1,12 @@
+# OpenCommit 模型配置
+# config 会合并到 ~/.opencommit
+
+opencommit_model_configs:
+  ppio_gpt5_4:
+    config:
+      OCO_AI_PROVIDER: openai
+      OCO_API_URL: https://api.ppio.com/openai/v1
+      OCO_API_KEY: "{{ (secrets | default({})).get('api_keys', {}).get('ppio', '') }}"
+      OCO_MODEL: pa/gpt-5.4
+
+opencommit_use_model: ppio_gpt5_4

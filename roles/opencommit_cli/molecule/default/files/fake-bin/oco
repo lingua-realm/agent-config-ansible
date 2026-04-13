@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+
+if [ "${1:-}" = "--version" ]; then
+  echo "oco 0.0.0-test"
+  exit 0
+fi
+
+echo "fake oco $*"
