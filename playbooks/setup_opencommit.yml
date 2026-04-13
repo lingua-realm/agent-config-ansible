@@ -62,7 +62,6 @@
 
     - name: 归一化 agent_opencommit 输入变量
       set_fact:
-        opencommit_confirm_config_update_effective: "{{ opencommit_confirm_config_update | default(true) }}"
         opencommit_active_model_config_effective: "{{ opencommit_model_configs[opencommit_use_model] }}"
       tags:
         - always
@@ -92,7 +91,7 @@
         agent_opencommit_opencommit_auto_install_npm: "{{ opencommit_auto_install_npm | default('opencommit') }}"
         agent_opencommit_manage_config: "{{ opencommit_manage_config | default(true) | bool }}"
         agent_opencommit_run_verify: "{{ opencommit_run_verify | default(true) | bool }}"
-        agent_opencommit_confirm_config_update: "{{ opencommit_confirm_config_update_effective | bool }}"
+        agent_opencommit_confirm_config_update: "{{ opencommit_confirm_config_update | default(true) | bool }}"
         agent_opencommit_backup: "{{ opencommit_backup | default(true) | bool }}"
         agent_opencommit_backup_root: "{{ opencommit_backup_root_effective }}"
         agent_opencommit_config: "{{ opencommit_config_effective }}"

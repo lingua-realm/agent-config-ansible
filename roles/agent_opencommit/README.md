@@ -21,7 +21,7 @@
 | `agent_opencommit_opencommit_auto_install_npm` | ❌ | `opencommit` | OpenCommit CLI 自动安装时使用的 npm 包名 |
 | `agent_opencommit_manage_config` | ❌ | `true` | 是否管理 `~/.opencommit` |
 | `agent_opencommit_run_verify` | ❌ | `true` | role 末尾是否执行验证任务 |
-| `agent_opencommit_confirm_config_update` | ❌ | `false` | `~/.opencommit` 变更时是否交互确认 |
+| `agent_opencommit_confirm_config_update` | ❌ | `true` | `~/.opencommit` 变更时是否交互确认 |
 | `agent_opencommit_backup` | ❌ | `true` | 是否为托管文件创建备份 |
 | `agent_opencommit_backup_root` | ❌ | `""` | 统一备份根目录；设置后会自动派生 `config/` 子目录 |
 | `agent_opencommit_config` | ❌ | `{}` | 用于生成 `~/.opencommit` 的配置对象 |
@@ -60,5 +60,5 @@ agent_opencommit_result:
 ## 说明
 
 - `~/.opencommit` 使用按键排序的 `KEY=JSON_VALUE` 形式渲染，既能保留布尔/数字类型，也能安全写入字符串与 JSON 对象。
-- `agent_opencommit_confirm_config_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
+- `agent_opencommit_confirm_config_update` 默认开启，适用于手动执行 playbook 的交互确认；如果是无人值守执行，应显式设置为 `false`。
 - 设置 `agent_opencommit_backup_root` 后，`~/.opencommit` 的备份会写入其下的 `config/` 子目录。

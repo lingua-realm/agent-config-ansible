@@ -19,7 +19,7 @@ agent_opencommit_manage_config: true
 agent_opencommit_run_verify: true
 
 # 是否在变更 ~/.opencommit 时交互确认
-agent_opencommit_confirm_config_update: false
+agent_opencommit_confirm_config_update: true
 
 # 是否为 ~/.opencommit 创建备份
 agent_opencommit_backup: true
