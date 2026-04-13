@@ -31,6 +31,7 @@ jobs:
           uv run ansible-playbook --syntax-check playbooks/setup_gemini_cli.yml
           uv run ansible-playbook --syntax-check playbooks/setup_copilot_cli.yml
           uv run ansible-playbook --syntax-check playbooks/setup_cursor.yml
+          uv run ansible-playbook --syntax-check playbooks/setup_opencommit.yml
           uv run ansible-playbook --syntax-check playbooks/setup_agent_skills.yml
 
   setup-tools:
@@ -46,6 +47,7 @@ jobs:
           - gemini_cli
           - copilot_cli
           - cursor
+          - opencommit
 
     steps:
       - uses: actions/checkout@v4
@@ -73,6 +75,7 @@ jobs:
             gemini_cli)   echo "playbook=playbooks/setup_gemini_cli.yml"    >> "$GITHUB_OUTPUT" ;;
             copilot_cli)  echo "playbook=playbooks/setup_copilot_cli.yml"   >> "$GITHUB_OUTPUT" ;;
             cursor)       echo "playbook=playbooks/setup_cursor.yml"        >> "$GITHUB_OUTPUT" ;;
+            opencommit)   echo "playbook=playbooks/setup_opencommit.yml"    >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Write extra-vars file
@@ -97,6 +100,7 @@ jobs:
           ]
 
           codex_settings = load_yaml("inventory/default/group_vars/all/codex/settings.yml")["codex_settings"]
+          opencommit_settings = load_yaml("inventory/default/group_vars/all/opencommit/settings.yml")["opencommit_settings"]
 
           claude_code_verify_schema = True
           gemini_verify_schema = True
@@ -116,6 +120,8 @@ jobs:
               "gemini_confirm_settings_update": False,
               "gemini_confirm_env_update": False,
               "gemini_verify_schema": gemini_verify_schema,
+              "opencommit_settings": opencommit_settings,
+              "opencommit_confirm_config_update": False,
           }
 
           secrets = {}

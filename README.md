@@ -1,6 +1,6 @@
 # agent-config-ansible
 
-基于 Ansible 的 AI Agent 配置管理仓库，用来把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor 以及 agent skills 以声明式方式同步到本地或远端主机。
+基于 Ansible 的 AI Agent / AI CLI 配置管理仓库，用来把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor、OpenCommit 以及 agent skills 以声明式方式同步到本地或远端主机。
 
 ## 管理范围
 
@@ -11,6 +11,7 @@
 | `playbooks/setup_gemini_cli.yml`   | 部署 Gemini CLI 的 `settings.json`、`.env` 与可选 `GEMINI.md` |
 | `playbooks/setup_copilot_cli.yml`  | 部署 GitHub Copilot CLI 的 `~/.copilot/mcp-config.json`       |
 | `playbooks/setup_cursor.yml`       | 部署 Cursor / Cursor Agent CLI 共用的 `~/.cursor/mcp.json`    |
+| `playbooks/setup_opencommit.yml`   | 部署 OpenCommit CLI 的 `~/.opencommit`                        |
 | `playbooks/setup_agent_skills.yml` | 通过 `skills` CLI 声明式安装或卸载 skills                     |
 
 ## 快速开始
@@ -60,6 +61,7 @@ inventory/<profile>/
 │   ├── gemini_cli/
 │   ├── copilot_cli/
 │   ├── cursor/
+│   ├── opencommit/
 │   └── secrets.yml
 ├── claude_assets/
 ├── codex_assets/
@@ -87,6 +89,7 @@ uv run ansible-playbook playbooks/setup_codex.yml
 uv run ansible-playbook playbooks/setup_gemini_cli.yml
 uv run ansible-playbook playbooks/setup_copilot_cli.yml
 uv run ansible-playbook playbooks/setup_cursor.yml
+uv run ansible-playbook playbooks/setup_opencommit.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
 ```
 

@@ -1,0 +1,9 @@
+# OpenCommit CLI 相关设置
+# 这些设置会被转换成 ~/.opencommit 的内容，供 OpenCommit CLI 使用。
+# 交互确认、备份目录、CLI 检查、自动安装、manage/run_verify 等运行控制默认已内置；
+# 只有需要覆盖时，才在 profile 中额外声明对应顶层变量。
+
+opencommit_settings:
+  OCO_EMOJI: true
+  OCO_DESCRIPTION: false
+  OCO_LANGUAGE: zh-CN

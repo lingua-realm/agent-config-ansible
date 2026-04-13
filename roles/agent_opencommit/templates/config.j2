@@ -1,0 +1,6 @@
+# OpenCommit CLI 配置
+# 由 Ansible 模板渲染生成，请勿手动修改
+# OpenCommit CLI 启动时会从 ~/.opencommit 加载
+{% for item in agent_opencommit_config_normalized | dictsort %}
+{{ item.0 }}={{ item.1 | to_json }}
+{% endfor %}

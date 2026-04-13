@@ -1,0 +1,60 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 3：验证 OpenCommit CLI 配置结果
+      ========================================
+
+- name: 检查 ~/.opencommit 是否存在
+  stat:
+    path: "{{ agent_opencommit_config_path }}"
+  register: agent_opencommit_config_stat
+  when: agent_opencommit_manage_config | bool
+
+- name: 解析 ~/.opencommit
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - |
+        import json, pathlib, sys
+        data = {}
+        for raw_line in pathlib.Path(sys.argv[1]).read_text(encoding='utf-8').splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' not in line:
+                print(f'invalid config line: {raw_line}', file=sys.stderr)
+                raise SystemExit(1)
+            key, value = line.split('=', 1)
+            try:
+                data[key] = json.loads(value)
+            except json.JSONDecodeError:
+                data[key] = value
+        print(json.dumps(data, ensure_ascii=False, sort_keys=True))
+      - "{{ agent_opencommit_config_path }}"
+  register: agent_opencommit_config_parsed
+  changed_when: false
+  when:
+    - agent_opencommit_manage_config | bool
+    - agent_opencommit_config_stat.stat.exists
+    - agent_opencommit_config_stat.stat.isreg
+
+- name: 断言 OpenCommit CLI 结果
+  assert:
+    that:
+      - >-
+        not (agent_opencommit_require_opencommit_cli | bool)
+        or (agent_opencommit_opencommit_status.available | default(false) | bool)
+      - >-
+        not (agent_opencommit_manage_config | bool)
+        or (
+          (agent_opencommit_config_stat.stat.exists | default(false))
+          and (agent_opencommit_config_stat.stat.isreg | default(false))
+        )
+      - >-
+        not (agent_opencommit_manage_config | bool)
+        or ((agent_opencommit_config_parsed.stdout | from_json) == agent_opencommit_config_normalized)
+    fail_msg: "agent_opencommit 验证失败：CLI 状态或 ~/.opencommit 内容与预期不一致"
+    success_msg: "✓ agent_opencommit 验证通过"

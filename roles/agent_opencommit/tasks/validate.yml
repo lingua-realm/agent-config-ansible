@@ -1,0 +1,71 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 1：校验 OpenCommit CLI 配置输入
+      ========================================
+
+- name: 校验 OpenCommit CLI 角色输入
+  assert:
+    that:
+      - agent_opencommit_home_dir | length > 0
+      - agent_opencommit_config_path | length > 0
+      - agent_opencommit_temp_root | length > 0
+      - agent_opencommit_config is mapping
+    fail_msg: >-
+      agent_opencommit 角色参数无效：请确保 home_dir / config_path / temp_root 非空，
+      且 config 为对象结构。
+
+- name: 归一化 OpenCommit CLI 配置对象
+  set_fact:
+    agent_opencommit_config_normalized: "{{ agent_opencommit_config | default({}) }}"
+    agent_opencommit_config_result:
+      changed: false
+      path: "{{ agent_opencommit_config_path }}"
+    agent_opencommit_role_path: "{{ role_path }}"
+    agent_opencommit_opencommit_status: {}
+  changed_when: false
+
+- name: 确保 OpenCommit 用户目录存在
+  file:
+    path: "{{ agent_opencommit_home_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: 确保 OpenCommit 临时目录存在
+  file:
+    path: "{{ agent_opencommit_temp_root }}"
+    state: directory
+    mode: "0700"
+
+- name: 检查 OpenCommit CLI
+  include_role:
+    name: npm_command_bootstrap
+  vars:
+    npm_command_bootstrap_key: opencommit
+    npm_command_bootstrap_display_name: OpenCommit CLI
+    npm_command_bootstrap_command: oco
+    npm_command_bootstrap_version_command: oco --version
+    npm_command_bootstrap_auto_install_npm: >-
+      {{ agent_opencommit_opencommit_auto_install_npm if (agent_opencommit_opencommit_auto_install_npm | length > 0) else omit }}
+    npm_command_bootstrap_required: "{{ agent_opencommit_require_opencommit_cli | bool }}"
+    npm_command_bootstrap_fail_message: "未检测到可用的 OpenCommit CLI，无法继续执行 OpenCommit 配置。"
+    npm_command_bootstrap_install_fail_message: "OpenCommit CLI 自动安装失败，请检查 npm 环境或手动安装。"
+  when: agent_opencommit_require_opencommit_cli | bool
+
+- name: 暴露 OpenCommit CLI 状态
+  set_fact:
+    agent_opencommit_opencommit_status: "{{ npm_command_bootstrap_results.opencommit | default({}) }}"
+  changed_when: false
+  when:
+    - agent_opencommit_require_opencommit_cli | bool
+    - npm_command_bootstrap_results is defined
+
+- name: 显示 OpenCommit CLI 状态汇总
+  debug:
+    msg: |
+      ----------------------------------------
+      OpenCommit CLI：{{ agent_opencommit_opencommit_status.version | default('未检查') }}
+      ----------------------------------------
+  when: agent_opencommit_require_opencommit_cli | bool

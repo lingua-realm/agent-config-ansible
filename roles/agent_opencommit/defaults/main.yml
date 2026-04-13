@@ -1,0 +1,40 @@
+---
+# OpenCommit 配置所在的用户目录
+agent_opencommit_home_dir: "{{ lookup('env', 'HOME') }}"
+
+# OpenCommit 核心配置文件路径
+agent_opencommit_config_path: "{{ agent_opencommit_home_dir }}/.opencommit"
+
+# 角色工作临时目录
+agent_opencommit_temp_root: /tmp/agent-opencommit
+
+# 是否要求 OpenCommit CLI 可用
+agent_opencommit_require_opencommit_cli: true
+
+# OpenCommit CLI 不可用时用于自动安装的 npm 包名；设为空字符串可关闭自动安装
+agent_opencommit_opencommit_auto_install_npm: "opencommit"
+
+# 是否管理 ~/.opencommit 以及执行最终验证
+agent_opencommit_manage_config: true
+agent_opencommit_run_verify: true
+
+# 是否在变更 ~/.opencommit 时交互确认
+agent_opencommit_confirm_config_update: false
+
+# 是否为 ~/.opencommit 创建备份
+agent_opencommit_backup: true
+
+# 统一备份根目录；为空时回退到目标文件目录下的 .managed_file_backups
+agent_opencommit_backup_root: ""
+
+# ~/.opencommit 备份目录与前缀
+agent_opencommit_config_backup_dir: >-
+  {{
+    ((agent_opencommit_backup_root | regex_replace('/+$', '')) ~ '/config')
+    if (agent_opencommit_backup_root | length > 0)
+    else (((agent_opencommit_config_path | dirname) | regex_replace('/+$', '')) ~ '/.managed_file_backups')
+  }}
+agent_opencommit_config_backup_prefix: .opencommit
+
+# 生成 ~/.opencommit 的配置对象
+agent_opencommit_config: {}

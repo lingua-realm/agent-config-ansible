@@ -1,0 +1,100 @@
+---
+# playbooks/setup_opencommit.yml
+# OpenCommit CLI 配置部署（基于本仓库 roles/agent_opencommit）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将当前仓库的 opencommit_* 变量桥接为 agent_opencommit 所需的输入
+# 2. 执行 agent_opencommit role，完成 ~/.opencommit 同步
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_opencommit.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_opencommit.yml -e "target_hosts=all"
+#
+# 默认备份目录（本地连接时）：
+#   <repo>/tmps/opencommit-backups/<inventory_hostname>/
+#     - config/
+
+- name: OpenCommit CLI 配置部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 计算 OpenCommit 备份根目录
+      set_fact:
+        opencommit_backup_root_effective: >-
+          {{
+            opencommit_backup_root
+            if (opencommit_backup_root is defined)
+            else (
+              (((inventory_dir | dirname) | dirname) ~ '/tmps/opencommit-backups/' ~ inventory_hostname)
+              if ((ansible_connection | default('ssh')) == 'local')
+              else ''
+            )
+          }}
+      tags:
+        - always
+
+    - name: 校验 OpenCommit 编排输入
+      assert:
+        that:
+          - opencommit_settings is mapping
+          - opencommit_model_configs is mapping
+          - opencommit_use_model is string
+          - opencommit_use_model | length > 0
+          - opencommit_use_model in opencommit_model_configs
+          - (opencommit_model_configs[opencommit_use_model].config | default({})) is mapping
+        fail_msg: >-
+          OpenCommit 编排输入无效：请检查 opencommit/settings.yml 与 models.yml 中的变量结构，
+          尤其是 opencommit_use_model 与 config。
+      tags:
+        - always
+
+    - name: 归一化 agent_opencommit 输入变量
+      set_fact:
+        opencommit_confirm_config_update_effective: "{{ opencommit_confirm_config_update | default(true) }}"
+        opencommit_active_model_config_effective: "{{ opencommit_model_configs[opencommit_use_model] }}"
+      tags:
+        - always
+
+    - name: 归一化派生 OpenCommit 配置变量
+      set_fact:
+        opencommit_config_effective: >-
+          {{
+            opencommit_settings
+            | combine(
+                opencommit_active_model_config_effective.config | default({}),
+                recursive=True
+              )
+          }}
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 agent_opencommit 角色
+      include_role:
+        name: agent_opencommit
+      vars:
+        agent_opencommit_home_dir: "{{ opencommit_home_dir | default(lookup('env', 'HOME')) }}"
+        agent_opencommit_config_path: "{{ opencommit_config_path | default((opencommit_home_dir | default(lookup('env', 'HOME'))) ~ '/.opencommit') }}"
+        agent_opencommit_temp_root: "{{ opencommit_temp_root | default('/tmp/agent-opencommit') }}"
+        agent_opencommit_require_opencommit_cli: "{{ opencommit_require_opencommit_cli | default(true) | bool }}"
+        agent_opencommit_opencommit_auto_install_npm: "{{ opencommit_auto_install_npm | default('opencommit') }}"
+        agent_opencommit_manage_config: "{{ opencommit_manage_config | default(true) | bool }}"
+        agent_opencommit_run_verify: "{{ opencommit_run_verify | default(true) | bool }}"
+        agent_opencommit_confirm_config_update: "{{ opencommit_confirm_config_update_effective | bool }}"
+        agent_opencommit_backup: "{{ opencommit_backup | default(true) | bool }}"
+        agent_opencommit_backup_root: "{{ opencommit_backup_root_effective }}"
+        agent_opencommit_config: "{{ opencommit_config_effective }}"
+      tags:
+        - always

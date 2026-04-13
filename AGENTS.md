@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents working in this repository.
 
 ## 项目快照
 
-这是一个基于 Ansible 的 AI Agent 配置管理仓库，目标是把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor 以及 agent skills 以声明式方式同步到本地或远端主机。
+这是一个基于 Ansible 的 AI Agent / AI CLI 配置管理仓库，目标是把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor、OpenCommit 以及 agent skills 以声明式方式同步到本地或远端主机。
 
 仓库根目录的 `AGENTS.md` 用于约束你在这个代码仓库里的工作方式；`inventory/<profile>/codex_assets/AGENTS.md` 和 `inventory/<profile>/gemini_assets/GEMINI.md` 则是样例资产，会被同步到目标机的用户级指令文件，两者不要混淆。
 
@@ -21,11 +21,13 @@ uv run ansible-playbook playbooks/setup_codex.yml
 uv run ansible-playbook playbooks/setup_gemini_cli.yml
 uv run ansible-playbook playbooks/setup_copilot_cli.yml
 uv run ansible-playbook playbooks/setup_cursor.yml
+uv run ansible-playbook playbooks/setup_opencommit.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
 
 # 显式指定 profile 运行
 scripts/run-playbook.sh <profile> playbooks/setup_codex.yml
 scripts/run-playbook.sh <profile> playbooks/setup_cursor.yml -e "target_hosts=all"
+scripts/run-playbook.sh <profile> playbooks/setup_opencommit.yml
 
 # 面向 inventory 中全部主机执行
 uv run ansible-playbook playbooks/setup_claude_code.yml -e "target_hosts=all"
@@ -33,6 +35,7 @@ uv run ansible-playbook playbooks/setup_codex.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_gemini_cli.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_copilot_cli.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_cursor.yml -e "target_hosts=all"
+uv run ansible-playbook playbooks/setup_opencommit.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
 
 # Molecule 测试（需进入对应 role 目录）
@@ -63,6 +66,10 @@ agent_gemini_cli
   ├── npm_command_bootstrap
   └── managed_file
 
+agent_opencommit
+  ├── npm_command_bootstrap
+  └── managed_file
+
 agent_copilot_cli
   ├── npm_command_bootstrap
   └── managed_json_merge
@@ -80,6 +87,7 @@ managed_agent_skills
 - `agent_claude_code`：检查 Claude CLI / ccline，管理插件，合并 `~/.claude.json`，生成 `settings.json`，同步 `output-styles/` 和 `CLAUDE.md`。
 - `agent_codex`：检查 Codex CLI，生成 `config.toml` 和 `.env`，同步 `AGENTS.md`。
 - `agent_gemini_cli`：检查 Gemini CLI，生成 `settings.json` 和 `.env`，同步 `GEMINI.md`。
+- `agent_opencommit`：检查 OpenCommit CLI，生成 `~/.opencommit`。
 - `agent_copilot_cli`：检查 Copilot CLI，生成并验证 `~/.copilot/mcp-config.json`。
 - `agent_cursor`：检查 Cursor Agent CLI（`agent`），生成并验证 `~/.cursor/mcp.json`。
 - `managed_agent_skills`：基于 `skills` CLI 声明式安装或卸载 skills。
@@ -105,6 +113,7 @@ inventory/default/group_vars/all/
   ├── gemini_cli/              # Gemini CLI 设置、模型、MCP 覆盖
   ├── copilot_cli/             # Copilot CLI 设置、MCP 覆盖
   ├── cursor/                  # Cursor 设置、MCP 覆盖
+  ├── opencommit/              # OpenCommit 设置与模型覆盖
   └── secrets.yml              # inventory 级敏感信息
 inventory/default/claude_assets/
 inventory/default/codex_assets/
@@ -165,6 +174,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `setup_codex.yml` 会把 `codex/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `codex/mcp_servers.yml` 归一化成单个 `agent_codex_config` / `agent_codex_env` 输入。
 - `agent_codex` 会保留目标机现有 `~/.codex/config.toml` 里的 `[projects]` 本地信任状态，避免 Codex CLI 写入的本地目录路径造成托管漂移；这些路径不需要入 inventory。
 - `setup_gemini_cli.yml` 会把 `gemini_cli/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `gemini_cli/mcp_servers.yml` 归一化成单个 `agent_gemini_cli_settings` / `agent_gemini_cli_env` 输入。
+- `setup_opencommit.yml` 会把 `opencommit/settings.yml` 与 `models.yml` 归一化成单个 `agent_opencommit_config` 输入，并同步到 `~/.opencommit`。
 - `setup_copilot_cli.yml` 当前只管理 `~/.copilot/mcp-config.json`，不负责 Copilot CLI 账号、模型或其他偏好设置。
 - `setup_cursor.yml` 当前只管理 `~/.cursor/mcp.json`，供 Cursor 编辑器与 Cursor Agent CLI 共享使用，不负责账号、模型或其他偏好设置。
 - `managed_agent_skills` 的 `source` 必须对目标机可见；仓库内路径通常只适用于 `ansible_connection=local`。
@@ -172,7 +182,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 
 ## CI 与升级细节
 
-- `.github/workflows/ci.yml` 会在每次 `push` 时触发，先对 6 个入口 playbook 做 `--syntax-check`，再用 matrix 分别执行 `claude_code`、`codex`、`gemini_cli`、`copilot_cli`、`cursor`，并在每个矩阵实例后执行 `setup_agent_skills.yml`。
+- `.github/workflows/ci.yml` 会在每次 `push` 时触发，先对 7 个入口 playbook 做 `--syntax-check`，再用 matrix 分别执行 `claude_code`、`codex`、`gemini_cli`、`copilot_cli`、`cursor`、`opencommit`，并在每个矩阵实例后执行 `setup_agent_skills.yml`。
 - CI 当前固定使用 `inventory/default/inventory.yml` 的 localhost 配置，不会自动切换到其他 profile。
 - 当前 CI 依赖的 Repository Secrets 只有 `VOLCES_API_KEY` 和 `PPIO_API_KEY`。
 - CI 会通过 extra vars 显式设置这些确认项为 `false` 以实现无人值守：
@@ -184,6 +194,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
   - `codex_confirm_env_update`
   - `gemini_confirm_settings_update`
   - `gemini_confirm_env_update`
+  - `opencommit_confirm_config_update`
   默认情况下这些确认项均为 `true`，用于防止意外覆盖用户配置。
 - 升级仓库时，建议先更新代码和依赖，再阅读 `README.md`、根目录 `AGENTS.md` 以及 `inventory/default/` 下的默认示例变化，然后先做 `--syntax-check`，最后只对需要的工具和小范围目标执行。
 
@@ -207,6 +218,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `managed_tree` / `agent_claude_code` 的容器测试依赖 `managed_tree_transport: auto` 自动回退到 archive 模式，不要为了绕过容器限制改回固定 `local/default` driver。
 - `agent_codex` 的验证依赖目标端 Python 内置 `tomllib`，目标主机需要 Python `>=3.11`。
 - `agent_gemini_cli` 的验证依赖目标端 Python 内置 `json`，默认用户级输出包括 `~/.gemini/settings.json`、`~/.gemini/.env` 和 `~/GEMINI.md`。
+- `agent_opencommit` 的验证依赖目标端 Python 内置 `json`，默认用户级输出为 `~/.opencommit`。
 
 如果你修改了某个 role，优先在对应 role 目录下运行相关 Molecule 场景，而不是只做静态阅读。
 
