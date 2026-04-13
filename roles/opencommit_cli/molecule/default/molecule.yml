@@ -4,7 +4,7 @@ dependency:
 driver:
   name: podman
 platforms:
-  - name: instance-agent-opencommit-default
+  - name: instance-opencommit-cli-default
     image: "python:3.13-bookworm"
     pre_build_image: true
 provisioner:

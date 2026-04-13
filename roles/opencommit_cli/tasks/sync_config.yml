@@ -1,0 +1,27 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 2：同步 ~/.opencommit
+      ========================================
+
+- name: 通过 managed_file 管理 ~/.opencommit
+  include_role:
+    name: managed_file
+  vars:
+    managed_file_display_name: OpenCommit 配置
+    managed_file_dest: "{{ opencommit_cli_config_path }}"
+    managed_file_temp_path: "{{ opencommit_cli_temp_root }}/opencommit.config.rendered"
+    managed_file_template_src: "{{ opencommit_cli_role_path }}/templates/config.j2"
+    managed_file_mode: "0600"
+    managed_file_compare_kind: plain
+    managed_file_confirm: "{{ opencommit_cli_confirm_config_update }}"
+    managed_file_backup: "{{ opencommit_cli_backup }}"
+    managed_file_backup_dir: "{{ opencommit_cli_config_backup_dir }}"
+    managed_file_backup_prefix: "{{ opencommit_cli_config_backup_prefix }}"
+
+- name: 记录 ~/.opencommit 同步结果
+  set_fact:
+    opencommit_cli_config_result: "{{ managed_file_result }}"
+  changed_when: false

@@ -1,0 +1,69 @@
+---
+- name: Converge — OpenCommit CLI 自动化配置
+  hosts: all
+  environment:
+    PATH: "{{ opencommit_cli_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    opencommit_cli_test_root: /tmp/opencommit-cli/default
+    opencommit_cli_fake_bin: "{{ opencommit_cli_test_root }}/fake-bin"
+    opencommit_cli_home_dir_test: "{{ opencommit_cli_test_root }}/home"
+  tasks:
+    - name: 准备测试目录
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ opencommit_cli_test_root }}"
+        - "{{ opencommit_cli_fake_bin }}"
+        - "{{ opencommit_cli_home_dir_test }}"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 安装假 oco 可执行文件
+      copy:
+        src: "{{ playbook_dir }}/files/fake-bin/oco"
+        dest: "{{ opencommit_cli_fake_bin }}/oco"
+        mode: "0755"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 预置旧的 ~/.opencommit
+      copy:
+        dest: "{{ opencommit_cli_home_dir_test }}/.opencommit"
+        content: |
+          OCO_MODEL="legacy-model"
+        mode: "0600"
+      tags:
+        - molecule-idempotence-notest
+
+    - name: 执行 opencommit_cli 角色
+      include_role:
+        name: opencommit_cli
+      vars:
+        opencommit_cli_home_dir: "{{ opencommit_cli_home_dir_test }}"
+        opencommit_cli_temp_root: "{{ opencommit_cli_test_root }}/tmp"
+        opencommit_cli_confirm_config_update: false
+        opencommit_cli_config:
+          OCO_AI_PROVIDER: openai
+          OCO_API_URL: https://api.ppio.com/openai/v1
+          OCO_API_KEY: test-key
+          OCO_MODEL: pa/gpt-5.4
+          OCO_EMOJI: true
+          OCO_DESCRIPTION: false
+          OCO_LANGUAGE: zh-CN
+          OCO_API_CUSTOM_HEADERS:
+            X-Test: "yes"
+
+    - name: 检查 ~/.opencommit 已生成
+      stat:
+        path: "{{ opencommit_cli_home_dir_test }}/.opencommit"
+      register: opencommit_cli_config_stat
+
+    - name: 断言 OpenCommit CLI 关键产物存在
+      assert:
+        that:
+          - opencommit_cli_config_stat.stat.exists
+          - opencommit_cli_config_stat.stat.isreg
+        fail_msg: "opencommit_cli 尚未生成 ~/.opencommit"
+        success_msg: "✓ opencommit_cli 已生成关键产物"

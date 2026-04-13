@@ -1,11 +1,11 @@
 ---
 # playbooks/setup_opencommit.yml
-# OpenCommit CLI 配置部署（基于本仓库 roles/agent_opencommit）
+# OpenCommit CLI 配置部署（基于本仓库 roles/opencommit_cli）
 #
 # 功能：
 # 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
-# 1. 将当前仓库的 opencommit_* 变量桥接为 agent_opencommit 所需的输入
-# 2. 执行 agent_opencommit role，完成 ~/.opencommit 同步
+# 1. 将当前仓库的 opencommit_* 变量桥接为 opencommit_cli 所需的输入
+# 2. 执行 opencommit_cli role，完成 ~/.opencommit 同步
 #
 # 使用方法：
 #   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_opencommit.yml
@@ -60,7 +60,7 @@
       tags:
         - always
 
-    - name: 归一化 agent_opencommit 输入变量
+    - name: 归一化 opencommit_cli 输入变量
       set_fact:
         opencommit_active_model_config_effective: "{{ opencommit_model_configs[opencommit_use_model] }}"
       tags:
@@ -80,20 +80,20 @@
         - always
 
   tasks:
-    - name: 执行 agent_opencommit 角色
+    - name: 执行 opencommit_cli 角色
       include_role:
-        name: agent_opencommit
+        name: opencommit_cli
       vars:
-        agent_opencommit_home_dir: "{{ opencommit_home_dir | default(lookup('env', 'HOME')) }}"
-        agent_opencommit_config_path: "{{ opencommit_config_path | default((opencommit_home_dir | default(lookup('env', 'HOME'))) ~ '/.opencommit') }}"
-        agent_opencommit_temp_root: "{{ opencommit_temp_root | default('/tmp/agent-opencommit') }}"
-        agent_opencommit_require_opencommit_cli: "{{ opencommit_require_opencommit_cli | default(true) | bool }}"
-        agent_opencommit_opencommit_auto_install_npm: "{{ opencommit_auto_install_npm | default('opencommit') }}"
-        agent_opencommit_manage_config: "{{ opencommit_manage_config | default(true) | bool }}"
-        agent_opencommit_run_verify: "{{ opencommit_run_verify | default(true) | bool }}"
-        agent_opencommit_confirm_config_update: "{{ opencommit_confirm_config_update | default(true) | bool }}"
-        agent_opencommit_backup: "{{ opencommit_backup | default(true) | bool }}"
-        agent_opencommit_backup_root: "{{ opencommit_backup_root_effective }}"
-        agent_opencommit_config: "{{ opencommit_config_effective }}"
+        opencommit_cli_home_dir: "{{ opencommit_home_dir | default(lookup('env', 'HOME')) }}"
+        opencommit_cli_config_path: "{{ opencommit_config_path | default((opencommit_home_dir | default(lookup('env', 'HOME'))) ~ '/.opencommit') }}"
+        opencommit_cli_temp_root: "{{ opencommit_temp_root | default('/tmp/opencommit-cli') }}"
+        opencommit_cli_require_opencommit_cli: "{{ opencommit_require_opencommit_cli | default(true) | bool }}"
+        opencommit_cli_opencommit_auto_install_npm: "{{ opencommit_auto_install_npm | default('opencommit') }}"
+        opencommit_cli_manage_config: "{{ opencommit_manage_config | default(true) | bool }}"
+        opencommit_cli_run_verify: "{{ opencommit_run_verify | default(true) | bool }}"
+        opencommit_cli_confirm_config_update: "{{ opencommit_confirm_config_update | default(true) | bool }}"
+        opencommit_cli_backup: "{{ opencommit_backup | default(true) | bool }}"
+        opencommit_cli_backup_root: "{{ opencommit_backup_root_effective }}"
+        opencommit_cli_config: "{{ opencommit_config_effective }}"
       tags:
         - always

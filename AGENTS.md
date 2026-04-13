@@ -66,7 +66,7 @@ agent_gemini_cli
   ├── npm_command_bootstrap
   └── managed_file
 
-agent_opencommit
+opencommit_cli
   ├── npm_command_bootstrap
   └── managed_file
 
@@ -87,7 +87,7 @@ managed_agent_skills
 - `agent_claude_code`：检查 Claude CLI / ccline，管理插件，合并 `~/.claude.json`，生成 `settings.json`，同步 `output-styles/` 和 `CLAUDE.md`。
 - `agent_codex`：检查 Codex CLI，生成 `config.toml` 和 `.env`，同步 `AGENTS.md`。
 - `agent_gemini_cli`：检查 Gemini CLI，生成 `settings.json` 和 `.env`，同步 `GEMINI.md`。
-- `agent_opencommit`：检查 OpenCommit CLI，生成 `~/.opencommit`。
+- `opencommit_cli`：检查 OpenCommit CLI，生成 `~/.opencommit`。
 - `agent_copilot_cli`：检查 Copilot CLI，生成并验证 `~/.copilot/mcp-config.json`。
 - `agent_cursor`：检查 Cursor Agent CLI（`agent`），生成并验证 `~/.cursor/mcp.json`。
 - `managed_agent_skills`：基于 `skills` CLI 声明式安装或卸载 skills。
@@ -174,7 +174,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `setup_codex.yml` 会把 `codex/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `codex/mcp_servers.yml` 归一化成单个 `agent_codex_config` / `agent_codex_env` 输入。
 - `agent_codex` 会保留目标机现有 `~/.codex/config.toml` 里的 `[projects]` 本地信任状态，避免 Codex CLI 写入的本地目录路径造成托管漂移；这些路径不需要入 inventory。
 - `setup_gemini_cli.yml` 会把 `gemini_cli/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `gemini_cli/mcp_servers.yml` 归一化成单个 `agent_gemini_cli_settings` / `agent_gemini_cli_env` 输入。
-- `setup_opencommit.yml` 会把 `opencommit/settings.yml` 与 `models.yml` 归一化成单个 `agent_opencommit_config` 输入，并同步到 `~/.opencommit`。
+- `setup_opencommit.yml` 会把 `opencommit/settings.yml` 与 `models.yml` 归一化成单个 `opencommit_cli_config` 输入，并同步到 `~/.opencommit`。
 - `setup_copilot_cli.yml` 当前只管理 `~/.copilot/mcp-config.json`，不负责 Copilot CLI 账号、模型或其他偏好设置。
 - `setup_cursor.yml` 当前只管理 `~/.cursor/mcp.json`，供 Cursor 编辑器与 Cursor Agent CLI 共享使用，不负责账号、模型或其他偏好设置。
 - `managed_agent_skills` 的 `source` 必须对目标机可见；仓库内路径通常只适用于 `ansible_connection=local`。
@@ -218,7 +218,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `managed_tree` / `agent_claude_code` 的容器测试依赖 `managed_tree_transport: auto` 自动回退到 archive 模式，不要为了绕过容器限制改回固定 `local/default` driver。
 - `agent_codex` 的验证依赖目标端 Python 内置 `tomllib`，目标主机需要 Python `>=3.11`。
 - `agent_gemini_cli` 的验证依赖目标端 Python 内置 `json`，默认用户级输出包括 `~/.gemini/settings.json`、`~/.gemini/.env` 和 `~/GEMINI.md`。
-- `agent_opencommit` 的验证依赖目标端 Python 内置 `json`，默认用户级输出为 `~/.opencommit`。
+- `opencommit_cli` 的验证依赖目标端 Python 内置 `json`，默认用户级输出为 `~/.opencommit`。
 
 如果你修改了某个 role，优先在对应 role 目录下运行相关 Molecule 场景，而不是只做静态阅读。
 

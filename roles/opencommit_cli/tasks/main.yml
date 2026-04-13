@@ -1,0 +1,19 @@
+---
+- name: OpenCommit CLI 自动化配置入口
+  include_tasks: validate.yml
+
+- name: OpenCommit 配置同步阶段
+  include_tasks: sync_config.yml
+  when: opencommit_cli_manage_config | bool
+
+- name: OpenCommit 验证阶段
+  include_tasks: verify.yml
+  when: opencommit_cli_run_verify | bool
+
+- name: 汇总 OpenCommit CLI 自动化配置结果
+  set_fact:
+    opencommit_cli_result:
+      changed: "{{ opencommit_cli_config_result.changed | bool }}"
+      opencommit_cli: "{{ opencommit_cli_opencommit_status }}"
+      config: "{{ opencommit_cli_config_result }}"
+  changed_when: false
