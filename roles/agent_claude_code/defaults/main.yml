@@ -84,6 +84,7 @@ agent_claude_code_settings:
   env: {}
   model: ""
   alwaysThinkingEnabled: false
+  effortLevel: ""
   outputStyle: ""
   language: ""
   permissions:
