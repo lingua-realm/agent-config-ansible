@@ -55,6 +55,16 @@
     - agent_claude_code_manage_settings | bool
     - agent_claude_code_settings_normalized.language | length > 0
 
+- name: 验证 settings.json effortLevel 字段
+  assert:
+    that:
+      - agent_claude_code_settings_data.effortLevel == agent_claude_code_settings_normalized.effortLevel
+    fail_msg: "settings.json effortLevel 字段不匹配"
+    success_msg: "✓ settings.json effortLevel 字段正确"
+  when:
+    - agent_claude_code_manage_settings | bool
+    - agent_claude_code_settings_normalized.effortLevel | length > 0
+
 - name: 验证 settings.json 启用插件配置
   assert:
     that:

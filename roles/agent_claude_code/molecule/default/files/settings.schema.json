@@ -28,6 +28,9 @@
     "alwaysThinkingEnabled": {
       "type": "boolean"
     },
+    "effortLevel": {
+      "type": "string"
+    },
     "outputStyle": {
       "type": "string"
     },
