@@ -49,5 +49,6 @@ claude_code_model_configs: # 模型配置
     sonnet_model: "deepseek-v4-pro[1m]"
     haiku_model: "deepseek-v4-flash"
     claude_code_subagent: "deepseek-v4-flash"
+    effort: "max"
 
 claude_code_use_model: "qiniu_step_3_5_flash"
