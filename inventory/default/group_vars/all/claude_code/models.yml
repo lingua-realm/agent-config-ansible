@@ -1,6 +1,8 @@
 private_variables: # 仅供当前文件复用的变量
   volces_api_base_url: "https://ark.cn-beijing.volces.com/api/coding"
   qiniu_api_base_url: "https://api.qnaigc.com"
+  openrouter_api_base_url: "https://openrouter.ai/api"
+  deepseek_api_base_url: "https://api.deepseek.com/anthropic"
 
 claude_code_model_configs: # 模型配置
   # 模型配置示例，实际使用时请根据需要修改或删除
@@ -12,6 +14,10 @@ claude_code_model_configs: # 模型配置
     base_url: "{{ private_variables.volces_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
     model: "kimi-k2.5"
+  volces_ark_code_latest: # Coding Plan 订阅模型，自动选择
+    base_url: "{{ private_variables.volces_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
+    model: "ark-code-latest"
   qiniu_longcat_flash_lite: # 这个免费模型贼难用，不推荐
     base_url: "{{ private_variables.qiniu_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('qiniu', '') }}"
@@ -24,5 +30,24 @@ claude_code_model_configs: # 模型配置
   anthropic_subscription: # Anthropic 官方订阅账户（Pro/Max/Team），无需 API Key
     auth: subscription
     model: "opus" # 内置别名：opus / sonnet / haiku / opusplan / opus[1m] / sonnet[1m]
+
+  # OpenRouter 示例
+  openrouter_claude_opus_4_6:
+    base_url: "{{ private_variables.openrouter_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('openrouter', '') }}"
+    model: "anthropic/claude-opus-4.6"
+  openrouter_free:
+    base_url: "{{ private_variables.openrouter_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('zzq_openrouter', '') }}"
+    model: "nvidia/nemotron-3-super-120b-a12b:free"
+
+  # DeepSeek Anthropic API 兼容示例（支持多模型别名）
+  deepseek_v4:
+    base_url: "{{ private_variables.deepseek_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('deepseek', '') }}"
+    opus_model: "deepseek-v4-pro[1m]"
+    sonnet_model: "deepseek-v4-pro[1m]"
+    haiku_model: "deepseek-v4-flash"
+    claude_code_subagent: "deepseek-v4-flash"
 
 claude_code_use_model: "qiniu_step_3_5_flash"

@@ -17,6 +17,7 @@ agent_skills_items:
       - claude-code
       - codex
       - github-copilot
+      - cursor
     scope: global
 
   - name: 安装 obra/superpowers 相关 Skills
@@ -41,6 +42,7 @@ agent_skills_items:
       - claude-code
       - codex
       - github-copilot
+      - cursor
     scope: global
 
   - name: 安装 vercel-labs/skills 官方相关 Skills
@@ -52,6 +54,7 @@ agent_skills_items:
       - claude-code
       - codex
       - github-copilot
+      - cursor
     scope: global
 
   - name: 安装 github/awesome-copilot 官方相关 Skills
@@ -63,6 +66,7 @@ agent_skills_items:
       - claude-code
       - codex
       - github-copilot
+      - cursor
     scope: global
 
   - name: 安装 jkeskikangas/skills 的 AGENTS.md 管理技能
@@ -77,6 +81,18 @@ agent_skills_items:
       - github-copilot
       - cursor
       - opencode
+    scope: global
+
+  - name: 安装 upstash/context7 Skills
+    state: present
+    source: upstash/context7
+    skills:
+      - context7-cli # Context7 API 文档检索
+    agents:
+      - claude-code
+      - codex
+      - github-copilot
+      - cursor
     scope: global
 #
 #   - name: 卸载 Claude 遗留 skill

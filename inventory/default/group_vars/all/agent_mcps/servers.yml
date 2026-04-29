@@ -39,7 +39,7 @@ agent_mcps:
   playwright:
     type: "stdio"
     command: "npx"
-    args: ["@playwright/mcp@latest"]
+    args: ["-y", "@playwright/mcp@latest"]
 
   # 联网搜索
   open-websearch:
@@ -50,6 +50,26 @@ agent_mcps:
       MODE: "stdio"
       DEFAULT_SEARCH_ENGINE: "duckduckgo"
       ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,brave"
+
+  # 联网搜索（火山引擎 AskEcho）
+  mcp-server-askecho-search-infinity:
+    type: "stdio"
+    command: uvx
+    args:
+      - "--from"
+      - "git+https://github.com/volcengine/mcp-server@9f2f824f1bdfe7b9d0e33ec1bdf666e4814fbad5#subdirectory=server/mcp_server_askecho_search_infinity"
+      - "mcp-server-askecho-search-infinity"
+    env:
+      ASK_ECHO_SEARCH_INFINITY_API_KEY: "{{ (secrets | default({})).get('mcp_server_askecho_search_infinity_api_key', '') }}"
+
+  # Codecov 代码覆盖率统计
+  codecov:
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@egulatee/mcp-codecov"]
+    env:
+      CODECOV_BASE_URL: https://codecov.io
+      CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
 
   # Figma 设计稿读取（第三方 figma-context-mcp，无官方额度限制）
   # 需要在 secrets.yml 中配置 secrets.api_keys.figma 为你的 Figma Personal Access Token
