@@ -29,6 +29,7 @@
           'env': {},
           'model': '',
           'alwaysThinkingEnabled': false,
+          'effortLevel': '',
           'outputStyle': '',
           'language': '',
           'permissions': {
@@ -60,6 +61,7 @@
     that:
       - agent_claude_code_settings_normalized.env is mapping
       - agent_claude_code_settings_normalized.model | length > 0
+      - agent_claude_code_settings_normalized.effortLevel is string
       - agent_claude_code_settings_normalized.outputStyle | length > 0
       - agent_claude_code_settings_normalized.permissions is mapping
       - agent_claude_code_settings_normalized.permissions.allow is sequence

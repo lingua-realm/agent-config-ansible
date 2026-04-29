@@ -92,7 +92,8 @@
             ANTHROPIC_API_KEY: test-key
             ANTHROPIC_BASE_URL: https://example.test
           model: claude-sonnet-4-5
-          alwaysThinkingEnabled: true
+          alwaysThinkingEnabled: false
+          effortLevel: high
           outputStyle: custom-style
           language: zh-CN
           permissions:
