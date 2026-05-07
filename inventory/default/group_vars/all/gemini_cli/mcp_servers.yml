@@ -2,4 +2,12 @@
 # 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
 # 这里仅放 Gemini 特有的覆盖项；会在渲染 ~/.gemini/settings.json 前与共享配置递归合并。
 
-gemini_mcp_servers: {}
+gemini_mcp_servers:
+  # 共享默认 MCP 已移除 context7 / deepwiki；Gemini 继续通过本文件保留这两个默认能力。
+  context7:
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@upstash/context7-mcp"]
+  deepwiki:
+    type: "http"
+    url: "https://mcp.deepwiki.com/mcp"

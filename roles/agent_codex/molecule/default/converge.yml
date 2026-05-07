@@ -81,17 +81,34 @@
               wire_api: responses
               env_key: PPIO_API_KEY
           mcp_servers:
-            context7:
-              command: npx
-              args:
-                - -y
-                - '@upstash/context7-mcp'
-            fetch:
+            mcp-server-fetch:
               command: uvx
               args:
                 - mcp-server-fetch
-            deepwiki:
-              url: https://mcp.deepwiki.com/mcp
+            open-websearch:
+              command: npx
+              args:
+                - -y
+                - open-websearch@latest
+              env:
+                MODE: stdio
+                DEFAULT_SEARCH_ENGINE: duckduckgo
+                ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
+            codecov:
+              command: npx
+              args:
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
+            serena:
+              command: uvx
+              args:
+                - --from
+                - git+https://github.com/oraios/serena
+                - serena
+                - start-mcp-server
+              startup_timeout_sec: 20
         agent_codex_env:
           PPIO_API_KEY: test-key
         agent_codex_agents_md_src: "{{ playbook_dir }}/files/AGENTS.md"

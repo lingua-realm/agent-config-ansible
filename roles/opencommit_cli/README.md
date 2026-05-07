@@ -54,7 +54,7 @@ opencommit_cli_result:
           OCO_MODEL: pa/gpt-5.4
           OCO_EMOJI: true
           OCO_DESCRIPTION: false
-          OCO_LANGUAGE: zh-CN
+          OCO_LANGUAGE: zh_CN
 ```
 
 ## 说明

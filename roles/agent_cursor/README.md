@@ -33,15 +33,18 @@
 ```yaml
 agent_cursor_mcp_config:
   mcpServers:
-    context7:
+    mcp-server-fetch:
+      command: uvx
+      args:
+        - mcp-server-fetch
+      env: {}
+    codecov:
       command: npx
       args:
         - -y
-        - '@upstash/context7-mcp'
-      env: {}
-    deepwiki:
-      url: https://mcp.deepwiki.com/mcp
-      headers: {}
+        - '@egulatee/mcp-codecov'
+      env:
+        CODECOV_BASE_URL: https://codecov.io
 ```
 
 也可以使用 Cursor 额外支持的字段，例如：
@@ -85,12 +88,13 @@ agent_cursor_result:
               autoApprove:
                 - get_issue
                 - list_pull_requests
-            context7:
+            codecov:
               command: npx
               args:
                 - -y
-                - '@upstash/context7-mcp'
-              env: {}
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
 ```
 
 ## 说明

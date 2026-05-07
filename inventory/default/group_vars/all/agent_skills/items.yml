@@ -6,6 +6,12 @@
 # - GitHub shorthand / Git URL：适合 local 与 remote
 # - 本地路径：通常只适用于 ansible_connection=local，或目标机已存在相同路径
 
+agent_skills_default_agents:
+  - claude-code
+  - codex
+  - github-copilot
+  - cursor
+
 agent_skills_items:
   - name: 安装 anthropics/skills 官方相关 Skills
     state: present
@@ -13,10 +19,7 @@ agent_skills_items:
     skills:
       - frontend-design # 产出高质量、非模板化的前端界面
       - skill-creator # 创建、改进和评测 skill
-    agents:
-      - claude-code
-      - codex
-      - github-copilot
+    agents: "{{ agent_skills_default_agents }}"
     scope: global
 
   - name: 安装 obra/superpowers 相关 Skills
@@ -37,10 +40,7 @@ agent_skills_items:
       - verification-before-completion # 宣称完成前先执行必要验证
       - writing-plans # 编码前把多步骤任务整理成实施计划
       - writing-skills # 编写、修改和验证 skill 内容
-    agents:
-      - claude-code
-      - codex
-      - github-copilot
+    agents: "{{ agent_skills_default_agents }}"
     scope: global
 
   - name: 安装 vercel-labs/skills 官方相关 Skills
@@ -48,10 +48,7 @@ agent_skills_items:
     source: vercel-labs/skills
     skills:
       - find-skills # 通过 npx find-skills 命令行工具自动查找和安装技能
-    agents:
-      - claude-code
-      - codex
-      - github-copilot
+    agents: "{{ agent_skills_default_agents }}"
     scope: global
 
   - name: 安装 github/awesome-copilot 官方相关 Skills
@@ -59,10 +56,39 @@ agent_skills_items:
     source: github/awesome-copilot
     skills:
       - gh-cli # GitHub CLI 相关技能，提供与 GitHub 仓库、Issue、PR 等交互的能力
-    agents:
-      - claude-code
-      - codex
-      - github-copilot
+    agents: "{{ agent_skills_default_agents }}"
+    scope: global
+
+  - name: 安装 upstash/context7 Skills
+    state: present
+    source: upstash/context7
+    skills:
+      - context7-cli # Context7 API 文档检索
+    agents: "{{ agent_skills_default_agents }}"
+    scope: global
+
+  - name: 安装 davidkiss/smart-ai-skills 的 reflection Skill
+    state: present
+    source: davidkiss/smart-ai-skills
+    skills:
+      - reflection # 完成任务前进行自我反思与质量审查
+    agents: "{{ agent_skills_default_agents }}"
+    scope: global
+
+  - name: 安装 aahl/skills 的 deepwiki Skill
+    state: present
+    source: aahl/skills
+    skills:
+      - mcp-deepwiki # DeepWiki MCP 文档查询
+    agents: "{{ agent_skills_default_agents }}"
+    scope: global
+
+  - name: 安装 microsoft/playwright-cli 的 playwright Skill
+    state: present
+    source: microsoft/playwright-cli
+    skills:
+      - playwright-cli # Playwright 浏览器自动化
+    agents: "{{ agent_skills_default_agents }}"
     scope: global
 
   - name: 安装 jkeskikangas/skills 的 AGENTS.md 管理技能

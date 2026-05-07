@@ -59,6 +59,7 @@ class InventoryDefaultsStructureTests(unittest.TestCase):
                 "TaskUpdate",
             }.issubset(set(allow))
         )
+        self.assertNotIn("mcp__context7__resolve-library-id", allow)
 
     def test_gemini_settings_do_not_repeat_runtime_control_vars(self) -> None:
         text = (REPO_ROOT / "inventory/default/group_vars/all/gemini_cli/settings.yml").read_text(encoding="utf-8")
@@ -97,6 +98,105 @@ class InventoryDefaultsStructureTests(unittest.TestCase):
             "cursor_run_verify",
         ]:
             self.assertNotIn(needle, text, msg=needle)
+
+    def test_opencommit_defaults_use_underscore_language_code(self) -> None:
+        settings = yaml.safe_load(
+            (REPO_ROOT / "inventory/default/group_vars/all/opencommit/settings.yml").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(settings["opencommit_settings"]["OCO_LANGUAGE"], "zh_CN")
+
+    def test_claude_default_models_include_optional_volces_ark_code_latest(self) -> None:
+        models = yaml.safe_load(
+            (REPO_ROOT / "inventory/default/group_vars/all/claude_code/models.yml").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(models["claude_code_use_model"], "qiniu_step_3_5_flash")
+        self.assertEqual(
+            models["claude_code_model_configs"]["volces_ark_code_latest"],
+            {
+                "base_url": "{{ private_variables.volces_api_base_url }}",
+                "api_key": "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}",
+                "model": "ark-code-latest",
+            },
+        )
+
+    def test_default_agent_skills_extract_shared_agents_and_generic_skills(self) -> None:
+        config = yaml.safe_load(
+            (REPO_ROOT / "inventory/default/group_vars/all/agent_skills/items.yml").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(
+            config["agent_skills_default_agents"],
+            ["claude-code", "codex", "github-copilot", "cursor"],
+        )
+
+        items_by_source = {item["source"]: item for item in config["agent_skills_items"]}
+
+        for source in [
+            "anthropics/skills",
+            "obra/superpowers",
+            "vercel-labs/skills",
+            "github/awesome-copilot",
+            "upstash/context7",
+            "davidkiss/smart-ai-skills",
+            "aahl/skills",
+            "microsoft/playwright-cli",
+        ]:
+            self.assertEqual(items_by_source[source]["agents"], "{{ agent_skills_default_agents }}", msg=source)
+
+        self.assertEqual(items_by_source["upstash/context7"]["skills"], ["context7-cli"])
+        self.assertEqual(items_by_source["davidkiss/smart-ai-skills"]["skills"], ["reflection"])
+        self.assertEqual(items_by_source["aahl/skills"]["skills"], ["mcp-deepwiki"])
+        self.assertEqual(items_by_source["microsoft/playwright-cli"]["skills"], ["playwright-cli"])
+        self.assertNotIn("gemini-cli", config["agent_skills_default_agents"])
+
+    def test_default_shared_mcps_keep_only_remaining_common_services(self) -> None:
+        config = yaml.safe_load(
+            (REPO_ROOT / "inventory/default/group_vars/all/agent_mcps/servers.yml").read_text(encoding="utf-8")
+        )
+
+        agent_mcps = config["agent_mcps"]
+
+        self.assertNotIn("context7", agent_mcps)
+        self.assertNotIn("deepwiki", agent_mcps)
+        self.assertNotIn("playwright", agent_mcps)
+        self.assertNotIn("mcp-server-askecho-search-infinity", agent_mcps)
+        self.assertIn("mcp-server-fetch", agent_mcps)
+        self.assertIn("open-websearch", agent_mcps)
+        self.assertIn("serena", agent_mcps)
+        self.assertEqual(
+            agent_mcps["codecov"],
+            {
+                "type": "stdio",
+                "command": "npx",
+                "args": ["-y", "@egulatee/mcp-codecov"],
+                "env": {
+                    "CODECOV_BASE_URL": "https://codecov.io",
+                    "CODECOV_TOKEN": "{{ (secrets | default({})).get('codecov_token', '') }}",
+                },
+            },
+        )
+
+    def test_gemini_default_mcp_overrides_preserve_context7_and_deepwiki(self) -> None:
+        config = yaml.safe_load(
+            (REPO_ROOT / "inventory/default/group_vars/all/gemini_cli/mcp_servers.yml").read_text(encoding="utf-8")
+        )
+
+        self.assertEqual(
+            config["gemini_mcp_servers"],
+            {
+                "context7": {
+                    "type": "stdio",
+                    "command": "npx",
+                    "args": ["-y", "@upstash/context7-mcp"],
+                },
+                "deepwiki": {
+                    "type": "http",
+                    "url": "https://mcp.deepwiki.com/mcp",
+                },
+            },
+        )
 
 
 class MinimalInventoryPlaybookTests(unittest.TestCase):
