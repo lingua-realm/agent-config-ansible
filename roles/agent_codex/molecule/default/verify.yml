@@ -43,13 +43,6 @@
                 MODE: stdio
                 DEFAULT_SEARCH_ENGINE: duckduckgo
                 ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
-            codecov:
-              command: npx
-              args:
-                - -y
-                - '@egulatee/mcp-codecov'
-              env:
-                CODECOV_BASE_URL: https://codecov.io
             serena:
               command: uvx
               args:
@@ -98,8 +91,6 @@
           - (agent_codex_config_final.stdout | from_json).model_providers.ppio.env_key == 'PPIO_API_KEY'
           - (agent_codex_config_final.stdout | from_json).mcp_servers['mcp-server-fetch'].args == ['mcp-server-fetch']
           - (agent_codex_config_final.stdout | from_json).mcp_servers.open-websearch.env.MODE == 'stdio'
-          - (agent_codex_config_final.stdout | from_json).mcp_servers.codecov.args == ['-y', '@egulatee/mcp-codecov']
-          - (agent_codex_config_final.stdout | from_json).mcp_servers.codecov.env.CODECOV_BASE_URL == 'https://codecov.io'
           - (agent_codex_config_final.stdout | from_json).mcp_servers.serena.startup_timeout_sec == 20
           - >-
             ((agent_codex_config_final.stdout | from_json).get('projects', {})).get('/tmp/agent-codex/default/workspace', {}).get('trust_level')

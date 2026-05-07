@@ -42,16 +42,6 @@ agent_copilot_cli_mcp_config:
       env: {}
       tools:
         - "*"
-    codecov:
-      type: stdio
-      command: npx
-      args:
-        - -y
-        - '@egulatee/mcp-codecov'
-      env:
-        CODECOV_BASE_URL: https://codecov.io
-      tools:
-        - "*"
 ```
 
 ## 输出
@@ -95,16 +85,6 @@ agent_copilot_cli_result:
                 MODE: stdio
               tools:
                 - search
-            codecov:
-              type: stdio
-              command: npx
-              args:
-                - -y
-                - '@egulatee/mcp-codecov'
-              env:
-                CODECOV_BASE_URL: https://codecov.io
-              tools:
-                - "*"
 ```
 
 ## 说明

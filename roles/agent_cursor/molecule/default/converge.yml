@@ -70,13 +70,6 @@
                 MODE: stdio
                 DEFAULT_SEARCH_ENGINE: duckduckgo
                 ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
-            codecov:
-              command: npx
-              args:
-                - -y
-                - '@egulatee/mcp-codecov'
-              env:
-                CODECOV_BASE_URL: https://codecov.io
             serena:
               command: uvx
               args:

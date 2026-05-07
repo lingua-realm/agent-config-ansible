@@ -34,14 +34,15 @@ agent_mcps:
       DEFAULT_SEARCH_ENGINE: "duckduckgo"
       ALLOWED_SEARCH_ENGINES: "duckduckgo,bing,brave"
 
-  # codecov MCP 代码覆盖率统计
-  codecov:
-    type: "stdio"
-    command: "npx"
-    args: ["-y", "@egulatee/mcp-codecov"]
-    env:
-      CODECOV_BASE_URL: "https://codecov.io"
-      CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
+  # codecov MCP 代码覆盖率统计（按需启用）
+  # 需要在 secrets.yml 中配置 secrets.codecov_token
+  # codecov:
+  #   type: "stdio"
+  #   command: "npx"
+  #   args: ["-y", "@egulatee/mcp-codecov"]
+  #   env:
+  #     CODECOV_BASE_URL: "https://codecov.io"
+  #     CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
 
   # Figma 设计稿读取（第三方 figma-context-mcp，无官方额度限制）
   # 需要在 secrets.yml 中配置 secrets.api_keys.figma 为你的 Figma Personal Access Token

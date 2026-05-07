@@ -165,38 +165,14 @@ class InventoryDefaultsStructureTests(unittest.TestCase):
         self.assertIn("mcp-server-fetch", agent_mcps)
         self.assertIn("open-websearch", agent_mcps)
         self.assertIn("serena", agent_mcps)
-        self.assertEqual(
-            agent_mcps["codecov"],
-            {
-                "type": "stdio",
-                "command": "npx",
-                "args": ["-y", "@egulatee/mcp-codecov"],
-                "env": {
-                    "CODECOV_BASE_URL": "https://codecov.io",
-                    "CODECOV_TOKEN": "{{ (secrets | default({})).get('codecov_token', '') }}",
-                },
-            },
-        )
+        self.assertNotIn("codecov", agent_mcps)
 
-    def test_gemini_default_mcp_overrides_preserve_context7_and_deepwiki(self) -> None:
+    def test_gemini_default_mcp_overrides_remain_empty(self) -> None:
         config = yaml.safe_load(
             (REPO_ROOT / "inventory/default/group_vars/all/gemini_cli/mcp_servers.yml").read_text(encoding="utf-8")
         )
 
-        self.assertEqual(
-            config["gemini_mcp_servers"],
-            {
-                "context7": {
-                    "type": "stdio",
-                    "command": "npx",
-                    "args": ["-y", "@upstash/context7-mcp"],
-                },
-                "deepwiki": {
-                    "type": "http",
-                    "url": "https://mcp.deepwiki.com/mcp",
-                },
-            },
-        )
+        self.assertEqual(config["gemini_mcp_servers"], {})
 
 
 class MinimalInventoryPlaybookTests(unittest.TestCase):
