@@ -95,10 +95,11 @@
           - (claude_code_settings.enabled_plugins | default([])) is sequence
           - (claude_code_settings.enabled_plugins | default([])) is not string
           - (claude_code_dot_claude_json_merge.mcpServers | default({})) is mapping
+          - (claude_code_mcp_servers_mode | default('replace') | lower) in ['merge', 'replace']
         fail_msg: >-
           Claude Code 编排输入无效：请检查 claude_code/settings.yml、models.yml、
           agent_mcps/servers.yml、claude_code/mcp_servers.yml 中的变量结构，
-          尤其是 claude_code_use_model、enabled_plugins 与 mcpServers。
+          尤其是 claude_code_use_model、enabled_plugins、mcpServers 与 claude_code_mcp_servers_mode。
       tags:
         - always
 
@@ -139,6 +140,7 @@
           }}
         claude_code_confirm_settings_update_effective: "{{ claude_code_confirm_settings_update | default(true) }}"
         claude_code_confirm_user_json_update_effective: "{{ claude_code_confirm_user_json_update | default(true) }}"
+        claude_code_mcp_servers_mode_effective: "{{ claude_code_mcp_servers_mode | default('replace') | lower }}"
         claude_code_settings_effective: >-
           {{
             (
@@ -219,6 +221,7 @@
         agent_claude_code_settings_schemafile: "{{ claude_code_settings_schemafile | default('https://json.schemastore.org/claude-code-settings.json') }}"
         agent_claude_code_confirm_settings_update: "{{ claude_code_confirm_settings_update_effective | bool }}"
         agent_claude_code_confirm_user_json_update: "{{ claude_code_confirm_user_json_update_effective | bool }}"
+        agent_claude_code_mcp_servers_mode: "{{ claude_code_mcp_servers_mode_effective }}"
         agent_claude_code_backup: "{{ claude_code_backup | default(true) | bool }}"
         agent_claude_code_backup_root: "{{ claude_code_backup_root_effective }}"
         agent_claude_code_plugin_marketplaces: "{{ claude_code_plugin_marketplaces_effective }}"

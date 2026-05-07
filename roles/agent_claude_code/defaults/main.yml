@@ -99,7 +99,10 @@ agent_claude_code_settings:
     command: ccline
     padding: 0
 
-# 将被 deep merge 到 ~/.claude.json 的对象
+# ~/.claude.json 中 mcpServers 的同步模式：replace(默认，严格替换) / merge(增量合并)
+agent_claude_code_mcp_servers_mode: replace
+
+# 将被写入 ~/.claude.json 的对象
 agent_claude_code_user_json:
   hasCompletedOnboarding: true
   mcpServers: {}

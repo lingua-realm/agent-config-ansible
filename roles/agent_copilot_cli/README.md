@@ -3,7 +3,7 @@
 复用仓库现有基础 role，为 GitHub Copilot CLI 执行一套最小但完整的 MCP 自动化配置流程：
 
 - 检查可选的 GitHub Copilot CLI 可用性
-- deep merge 并同步 `~/.copilot/mcp-config.json`
+- 同步 `~/.copilot/mcp-config.json`（默认仅对 `mcpServers` 做严格替换，其他字段保持合并语义）
 - 验证最终 MCP 配置结果
 
 当前 role 只处理 Copilot CLI 的 MCP 配置，不管理模型、认证或其他 CLI 行为设置。
@@ -11,7 +11,7 @@
 ## 依赖的基础 role
 
 - `npm_command_bootstrap`
-- `managed_json_merge`
+- `managed_file`
 
 ## 变量
 
@@ -27,7 +27,8 @@
 | `agent_copilot_cli_confirm_mcp_config_update` | ❌ | `false` | `mcp-config.json` 变更时是否交互确认 |
 | `agent_copilot_cli_backup` | ❌ | `true` | 是否为托管文件创建备份 |
 | `agent_copilot_cli_backup_root` | ❌ | `""` | 统一备份根目录；设置后会自动派生 `mcp-config/` 子目录 |
-| `agent_copilot_cli_mcp_config` | ✅ | 见 defaults | 将被 deep merge 到 `mcp-config.json` 的对象 |
+| `agent_copilot_cli_mcp_servers_mode` | ❌ | `replace` | `replace`：严格替换 `mcpServers`；`merge`：增量合并 `mcpServers` |
+| `agent_copilot_cli_mcp_config` | ✅ | 见 defaults | 写入 `mcp-config.json` 的对象（`mcpServers` 行为受 `agent_copilot_cli_mcp_servers_mode` 控制） |
 
 ## `agent_copilot_cli_mcp_config` 结构
 
@@ -109,6 +110,6 @@ agent_copilot_cli_result:
 
 ## 说明
 
-- `mcp-config.json` 使用 deep merge，同名 server 只覆盖声明的字段，未声明字段保持原样。
+- `agent_copilot_cli_mcp_servers_mode` 默认为 `replace`，会删除 `mcp-config.json` 中未声明的 MCP 条目；若需兼容旧行为可设为 `merge`。
 - 如果你希望使用仓库级 `.vscode/mcp.json`，可以覆盖 `agent_copilot_cli_mcp_config_path`；role 本身不强制限定目标路径。
 - `agent_copilot_cli_confirm_mcp_config_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。

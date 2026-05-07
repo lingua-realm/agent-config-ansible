@@ -112,6 +112,16 @@
     success_msg: "✓ ~/.claude.json onboarding 标记正确"
   when: agent_claude_code_manage_user_json | bool
 
+- name: 验证 mcpServers 严格替换结果
+  assert:
+    that:
+      - agent_claude_code_user_json_data.mcpServers == (agent_claude_code_user_json_normalized.mcpServers | default({}))
+    fail_msg: "~/.claude.json mcpServers 与期望不一致（replace 模式要求精确一致）"
+    success_msg: "✓ ~/.claude.json mcpServers 与期望完全一致"
+  when:
+    - agent_claude_code_manage_user_json | bool
+    - agent_claude_code_mcp_servers_mode_normalized == 'replace'
+
 - name: 验证 mcpServers 已正确合并
   assert:
     that:
@@ -130,6 +140,7 @@
     label: "{{ item.key }}"
   when:
     - agent_claude_code_manage_user_json | bool
+    - agent_claude_code_mcp_servers_mode_normalized == 'merge'
     - agent_claude_code_user_json_normalized.mcpServers | length > 0
 
 - name: 检查 output-styles 目录

@@ -107,10 +107,11 @@
           - (agent_claude_code_settings_json_final.content | b64decode | from_json).effortLevel == 'high'
           - (agent_claude_code_user_json_final.content | b64decode | from_json).untouched == true
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['local-demo'].command == 'node'
-          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers.existing.command == 'python3'
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers.existing is not defined
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].command == 'uvx'
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].args == ['mcp-server-fetch']
-          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].env == {}
+          - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['mcp-server-fetch'].env is not defined
+          - (((agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers | dict2items | map(attribute='key') | list | sort) == ['local-demo', 'mcp-server-fetch'])
           - agent_claude_code_output_style_custom.stat.exists
           - not agent_claude_code_output_style_legacy.stat.exists
           - agent_claude_code_skill_legacy.stat.exists

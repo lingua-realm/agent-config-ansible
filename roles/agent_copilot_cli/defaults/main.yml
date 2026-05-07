@@ -36,6 +36,9 @@ agent_copilot_cli_mcp_config_backup_dir: >-
   }}
 agent_copilot_cli_mcp_config_backup_prefix: mcp-config.json
 
-# 将被 deep merge 到 mcp-config.json 的对象
+# mcp-config.json 中 mcpServers 的同步模式：replace(默认，严格替换) / merge(增量合并)
+agent_copilot_cli_mcp_servers_mode: replace
+
+# 将被写入 mcp-config.json 的对象
 agent_copilot_cli_mcp_config:
   mcpServers: {}
