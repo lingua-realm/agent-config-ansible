@@ -12,6 +12,10 @@ claude_code_model_configs: # 模型配置
     base_url: "{{ private_variables.volces_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
     model: "kimi-k2.5"
+  volces_ark_code_latest: # Coding Plan 订阅模型，自动选择
+    base_url: "{{ private_variables.volces_api_base_url }}"
+    api_key: "{{ (secrets | default({})).get('api_keys', {}).get('volces', '') }}"
+    model: "ark-code-latest"
   qiniu_longcat_flash_lite: # 这个免费模型贼难用，不推荐
     base_url: "{{ private_variables.qiniu_api_base_url }}"
     api_key: "{{ (secrets | default({})).get('api_keys', {}).get('qiniu', '') }}"

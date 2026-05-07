@@ -56,21 +56,32 @@
             legacy:
               env:
                 MODE: stdio
-            context7:
+            mcp-server-fetch:
+              command: uvx
+              args:
+                - mcp-server-fetch
+              env: {}
+            open-websearch:
               command: npx
               args:
                 - -y
-                - '@upstash/context7-mcp'
-              env: {}
-              autoApprove:
-                - resolve-library-id
-            deepwiki:
-              url: https://mcp.deepwiki.com/mcp
-              headers: {}
-              disabled: false
-            playwright:
+                - open-websearch@latest
+              env:
+                MODE: stdio
+                DEFAULT_SEARCH_ENGINE: duckduckgo
+                ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
+            codecov:
               command: npx
               args:
-                - '@playwright/mcp@latest'
-              env: {}
-              cwd: /workspace
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
+            serena:
+              command: uvx
+              args:
+                - --from
+                - git+https://github.com/oraios/serena
+                - serena
+                - start-mcp-server
+              startup_timeout_sec: 20
