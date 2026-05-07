@@ -22,7 +22,7 @@
           OCO_MODEL: pa/gpt-5.4
           OCO_EMOJI: true
           OCO_DESCRIPTION: false
-          OCO_LANGUAGE: zh-CN
+          OCO_LANGUAGE: zh_CN
           OCO_API_CUSTOM_HEADERS:
             X-Test: "yes"
 
@@ -58,7 +58,7 @@
           - (opencommit_cli_config_final.stdout | from_json).OCO_MODEL == 'pa/gpt-5.4'
           - (opencommit_cli_config_final.stdout | from_json).OCO_EMOJI | bool
           - not ((opencommit_cli_config_final.stdout | from_json).OCO_DESCRIPTION | bool)
-          - (opencommit_cli_config_final.stdout | from_json).OCO_LANGUAGE == 'zh-CN'
+          - (opencommit_cli_config_final.stdout | from_json).OCO_LANGUAGE == 'zh_CN'
           - (opencommit_cli_config_final.stdout | from_json).OCO_API_CUSTOM_HEADERS['X-Test'] == 'yes'
         fail_msg: "opencommit_cli 场景验证失败"
         success_msg: "✓ opencommit_cli 场景通过"

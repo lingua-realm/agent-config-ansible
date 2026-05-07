@@ -54,11 +54,17 @@ agent_codex_config:
       wire_api: responses
       env_key: PPIO_API_KEY
   mcp_servers:
-    context7:
+    mcp-server-fetch:
+      command: uvx
+      args:
+        - mcp-server-fetch
+    codecov:
       command: npx
       args:
         - -y
-        - '@upstash/context7-mcp'
+        - '@egulatee/mcp-codecov'
+      env:
+        CODECOV_BASE_URL: https://codecov.io
 ```
 
 ## 输出
@@ -104,10 +110,17 @@ agent_codex_result:
               wire_api: responses
               env_key: PPIO_API_KEY
           mcp_servers:
-            fetch:
+            mcp-server-fetch:
               command: uvx
               args:
                 - mcp-server-fetch
+            codecov:
+              command: npx
+              args:
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
         agent_codex_env:
           PPIO_API_KEY: "{{ vault_ppio_api_key }}"
         agent_codex_agents_md_src: "{{ playbook_dir }}/files/AGENTS.md"

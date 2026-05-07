@@ -20,30 +20,48 @@
               tools:
                 - legacy_tool
                 - extra_tool
-            context7:
+            mcp-server-fetch:
+              type: stdio
+              command: uvx
+              args:
+                - mcp-server-fetch
+              env: {}
+              tools:
+                - "*"
+            open-websearch:
               type: stdio
               command: npx
               args:
                 - -y
-                - '@upstash/context7-mcp'
-              env: {}
+                - open-websearch@latest
+              env:
+                MODE: stdio
+                DEFAULT_SEARCH_ENGINE: duckduckgo
+                ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
               tools:
-                - "*"
-            deepwiki:
-              type: http
-              url: https://mcp.deepwiki.com/mcp
-              headers: {}
-              tools:
-                - read_page
-            playwright:
+                - search
+            codecov:
               type: stdio
               command: npx
               args:
-                - '@playwright/mcp@latest'
-              env: {}
-              cwd: /workspace
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
               tools:
                 - "*"
+            serena:
+              type: stdio
+              command: uvx
+              args:
+                - --from
+                - git+https://github.com/oraios/serena
+                - serena
+                - start-mcp-server
+              tools:
+                - "*"
+              env: {}
+              startup_timeout_sec: 20
 
     - name: 解析最终 mcp-config.json
       command:
@@ -61,11 +79,11 @@
           - not (agent_copilot_cli_result.changed | bool)
           - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.legacy.command == 'python3'
           - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.legacy.tools == ['legacy_tool', 'extra_tool']
-          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.context7.type == 'stdio'
-          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.context7.args == ['-y', '@upstash/context7-mcp']
-          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.context7.tools == ['*']
-          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.deepwiki.url == 'https://mcp.deepwiki.com/mcp'
-          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.deepwiki.tools == ['read_page']
-          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.playwright.cwd == '/workspace'
+          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers['mcp-server-fetch'].command == 'uvx'
+          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers['mcp-server-fetch'].tools == ['*']
+          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers['open-websearch'].env.MODE == 'stdio'
+          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers['open-websearch'].tools == ['search']
+          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.codecov.env.CODECOV_BASE_URL == 'https://codecov.io'
+          - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.serena.startup_timeout_sec == 20
         fail_msg: "agent_copilot_cli 场景验证失败"
         success_msg: "✓ agent_copilot_cli 场景通过"

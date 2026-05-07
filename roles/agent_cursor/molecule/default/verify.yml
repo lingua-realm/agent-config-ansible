@@ -19,24 +19,35 @@
             legacy:
               env:
                 MODE: stdio
-            context7:
+            mcp-server-fetch:
+              command: uvx
+              args:
+                - mcp-server-fetch
+              env: {}
+            open-websearch:
               command: npx
               args:
                 - -y
-                - '@upstash/context7-mcp'
-              env: {}
-              autoApprove:
-                - resolve-library-id
-            deepwiki:
-              url: https://mcp.deepwiki.com/mcp
-              headers: {}
-              disabled: false
-            playwright:
+                - open-websearch@latest
+              env:
+                MODE: stdio
+                DEFAULT_SEARCH_ENGINE: duckduckgo
+                ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
+            codecov:
               command: npx
               args:
-                - '@playwright/mcp@latest'
-              env: {}
-              cwd: /workspace
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
+            serena:
+              command: uvx
+              args:
+                - --from
+                - git+https://github.com/oraios/serena
+                - serena
+                - start-mcp-server
+              startup_timeout_sec: 20
 
     - name: 解析最终 mcp.json
       command:
@@ -55,10 +66,10 @@
           - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.legacy.command == 'python3'
           - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.legacy.args == ['-m', 'legacy']
           - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.legacy.env.MODE == 'stdio'
-          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.context7.command == 'npx'
-          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.context7.autoApprove == ['resolve-library-id']
-          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.deepwiki.url == 'https://mcp.deepwiki.com/mcp'
-          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.deepwiki.disabled == false
-          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.playwright.cwd == '/workspace'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers['mcp-server-fetch'].command == 'uvx'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers['open-websearch'].env.MODE == 'stdio'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.codecov.args == ['-y', '@egulatee/mcp-codecov']
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.codecov.env.CODECOV_BASE_URL == 'https://codecov.io'
+          - (agent_cursor_mcp_config_final.stdout | from_json).mcpServers.serena.startup_timeout_sec == 20
         fail_msg: "agent_cursor 场景验证失败"
         success_msg: "✓ agent_cursor 场景通过"

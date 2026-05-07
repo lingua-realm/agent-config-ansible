@@ -9,6 +9,9 @@ codex_settings:
   # sandbox_mode: read-only / workspace-write / danger-full-access
   sandbox_mode: "read-only"
 
+  # approvals_reviewer: user / guardian_subagent
+  approvals_reviewer: "user"
+
   # approval_policy: untrusted / on-failure / on-request / never
   # approval_policy: "on-request"
 

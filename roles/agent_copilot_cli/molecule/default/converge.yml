@@ -59,27 +59,45 @@
               tools:
                 - legacy_tool
                 - extra_tool
-            context7:
+            mcp-server-fetch:
+              type: stdio
+              command: uvx
+              args:
+                - mcp-server-fetch
+              env: {}
+              tools:
+                - "*"
+            open-websearch:
               type: stdio
               command: npx
               args:
                 - -y
-                - '@upstash/context7-mcp'
-              env: {}
+                - open-websearch@latest
+              env:
+                MODE: stdio
+                DEFAULT_SEARCH_ENGINE: duckduckgo
+                ALLOWED_SEARCH_ENGINES: duckduckgo,bing,brave
               tools:
-                - "*"
-            deepwiki:
-              type: http
-              url: https://mcp.deepwiki.com/mcp
-              headers: {}
-              tools:
-                - read_page
-            playwright:
+                - search
+            codecov:
               type: stdio
               command: npx
               args:
-                - '@playwright/mcp@latest'
-              env: {}
-              cwd: /workspace
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
               tools:
                 - "*"
+            serena:
+              type: stdio
+              command: uvx
+              args:
+                - --from
+                - git+https://github.com/oraios/serena
+                - serena
+                - start-mcp-server
+              tools:
+                - "*"
+              env: {}
+              startup_timeout_sec: 20

@@ -34,21 +34,24 @@
 ```yaml
 agent_copilot_cli_mcp_config:
   mcpServers:
-    context7:
+    mcp-server-fetch:
+      type: stdio
+      command: uvx
+      args:
+        - mcp-server-fetch
+      env: {}
+      tools:
+        - "*"
+    codecov:
       type: stdio
       command: npx
       args:
         - -y
-        - '@upstash/context7-mcp'
-      env: {}
+        - '@egulatee/mcp-codecov'
+      env:
+        CODECOV_BASE_URL: https://codecov.io
       tools:
         - "*"
-    deepwiki:
-      type: http
-      url: https://mcp.deepwiki.com/mcp
-      headers: {}
-      tools:
-        - read_page
 ```
 
 ## 输出
@@ -74,12 +77,11 @@ agent_copilot_cli_result:
       vars:
         agent_copilot_cli_mcp_config:
           mcpServers:
-            context7:
+            mcp-server-fetch:
               type: stdio
-              command: npx
+              command: uvx
               args:
-                - -y
-                - '@upstash/context7-mcp'
+                - mcp-server-fetch
               env: {}
               tools:
                 - "*"
@@ -93,6 +95,16 @@ agent_copilot_cli_result:
                 MODE: stdio
               tools:
                 - search
+            codecov:
+              type: stdio
+              command: npx
+              args:
+                - -y
+                - '@egulatee/mcp-codecov'
+              env:
+                CODECOV_BASE_URL: https://codecov.io
+              tools:
+                - "*"
 ```
 
 ## 说明

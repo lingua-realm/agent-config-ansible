@@ -18,28 +18,11 @@
 #   http:  url (+ headers / bearer_token_env_var 可选)
 
 agent_mcps:
-  # Context7 API 文档检索
-  context7:
-    type: "stdio"
-    command: "npx"
-    args: ["-y", "@upstash/context7-mcp"]
-
   # 用于自动获取网络内容，并转换成 Markdown 格式给 Agent
   mcp-server-fetch:
     type: "stdio"
     command: "uvx"
     args: ["mcp-server-fetch"]
-
-  # 用于自动联网搜索开源仓库信息
-  deepwiki:
-    type: "http"
-    url: "https://mcp.deepwiki.com/mcp"
-
-  # playwright 浏览器自动化
-  playwright:
-    type: "stdio"
-    command: "npx"
-    args: ["-y", "@playwright/mcp@latest"]
 
   # 联网搜索
   open-websearch:
@@ -62,14 +45,14 @@ agent_mcps:
   #   env:
   #     ASK_ECHO_SEARCH_INFINITY_API_KEY: "{{ (secrets | default({})).get('mcp_server_askecho_search_infinity_api_key', '') }}"
 
-  # Codecov 代码覆盖率统计，需要配置 secrets.codecov_token
-  # codecov:
-  #   type: "stdio"
-  #   command: "npx"
-  #   args: ["-y", "@egulatee/mcp-codecov"]
-  #   env:
-  #     CODECOV_BASE_URL: https://codecov.io
-  #     CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
+  # codecov MCP 代码覆盖率统计
+  codecov:
+    type: "stdio"
+    command: "npx"
+    args: ["-y", "@egulatee/mcp-codecov"]
+    env:
+      CODECOV_BASE_URL: "https://codecov.io"
+      CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
 
   # Figma 设计稿读取（第三方 figma-context-mcp，无官方额度限制）
   # 需要在 secrets.yml 中配置 secrets.api_keys.figma 为你的 Figma Personal Access Token
