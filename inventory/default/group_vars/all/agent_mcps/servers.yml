@@ -46,13 +46,13 @@ agent_mcps:
   #     ASK_ECHO_SEARCH_INFINITY_API_KEY: "{{ (secrets | default({})).get('mcp_server_askecho_search_infinity_api_key', '') }}"
 
   # codecov MCP 代码覆盖率统计
-  codecov:
-    type: "stdio"
-    command: "npx"
-    args: ["-y", "@egulatee/mcp-codecov"]
-    env:
-      CODECOV_BASE_URL: "https://codecov.io"
-      CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
+  # codecov:
+  #  type: "stdio"
+  #  command: "npx"
+  #  args: ["-y", "@egulatee/mcp-codecov"]
+  #  env:
+  #    CODECOV_BASE_URL: "https://codecov.io"
+  #    CODECOV_TOKEN: "{{ (secrets | default({})).get('codecov_token', '') }}"
 
   # Figma 设计稿读取（第三方 figma-context-mcp，无官方额度限制）
   # 需要在 secrets.yml 中配置 secrets.api_keys.figma 为你的 Figma Personal Access Token
