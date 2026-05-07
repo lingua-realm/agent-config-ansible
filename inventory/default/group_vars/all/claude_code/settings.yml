@@ -19,6 +19,8 @@ claude_code_settings:
     ANTHROPIC_DEFAULT_SONNET_MODEL: "{{ model_configs[claude_code_use_model].sonnet_model | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
     ANTHROPIC_DEFAULT_HAIKU_MODEL: "{{ model_configs[claude_code_use_model].haiku_model | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
     CLAUDE_CODE_SUBAGENT_MODEL: "{{ model_configs[claude_code_use_model].claude_code_subagent | default(model_configs[claude_code_use_model].model) if (model_configs[claude_code_use_model].auth | default('')) != 'subscription' else '' }}"
+    # 推理力度（仅部分 API 支持），可选值：minimal / low / medium / high / max
+    CLAUDE_CODE_EFFORT_LEVEL: "{{ model_configs[claude_code_use_model].effort | default('max') }}"
     # 隐私与遥测控制
     DISABLE_TELEMETRY: "1"
     DISABLE_ERROR_REPORTING: "1"

@@ -6,6 +6,7 @@
 # - GitHub shorthand / Git URL：适合 local 与 remote
 # - 本地路径：通常只适用于 ansible_connection=local，或目标机已存在相同路径
 
+# 大多数 Skills 复用的默认 agent 列表，减少重复声明。
 agent_skills_default_agents:
   - claude-code
   - codex
@@ -104,6 +105,7 @@ agent_skills_items:
       - cursor
       - opencode
     scope: global
+
 #
 #   - name: 卸载 Claude 遗留 skill
 #     state: absent

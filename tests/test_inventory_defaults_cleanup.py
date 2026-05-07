@@ -149,7 +149,10 @@ class InventoryDefaultsStructureTests(unittest.TestCase):
         self.assertEqual(items_by_source["davidkiss/smart-ai-skills"]["skills"], ["reflection"])
         self.assertEqual(items_by_source["aahl/skills"]["skills"], ["mcp-deepwiki"])
         self.assertEqual(items_by_source["microsoft/playwright-cli"]["skills"], ["playwright-cli"])
-        self.assertNotIn("gemini-cli", config["agent_skills_default_agents"])
+        self.assertEqual(
+            config["agent_skills_default_agents"],
+            ["claude-code", "codex", "github-copilot", "cursor"],
+        )
 
     def test_default_shared_mcps_keep_only_remaining_common_services(self) -> None:
         config = yaml.safe_load(
