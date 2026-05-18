@@ -97,13 +97,15 @@ agent_skills_items:
     source: jkeskikangas/skills
     skills:
       - writing-agents-md # 生成和维护 AGENTS.md / CLAUDE.md，支持从当前会话反思并渐进式改进
-    agents:
-      - claude-code
-      - codex
-      - gemini-cli
-      - github-copilot
-      - cursor
-      - opencode
+    agents: "{{ agent_skills_default_agents }}"
+    scope: global
+
+  - name: 安装 multica-ai/andrej-karpathy-skills 的编程准则
+    state: present
+    source: multica-ai/andrej-karpathy-skills
+    skills:
+      - karpathy-guidelines
+    agents: "{{ agent_skills_default_agents }}"
     scope: global
 
 #
