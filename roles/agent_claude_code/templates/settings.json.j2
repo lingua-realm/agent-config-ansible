@@ -34,4 +34,7 @@
 {% endfor %}
 {% set settings_data = settings_data | combine({'enabledPlugins': ns.enabled_plugins_map}, recursive=True) %}
 {% endif %}
+{% if agent_claude_code_settings_normalized.skipDangerousModePermissionPrompt | bool %}
+{% set settings_data = settings_data | combine({'skipDangerousModePermissionPrompt': true}, recursive=True) %}
+{% endif %}
 {{ settings_data | to_nice_json(sort_keys=True) }}

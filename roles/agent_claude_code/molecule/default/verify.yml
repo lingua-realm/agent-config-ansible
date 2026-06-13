@@ -35,6 +35,7 @@
             deny: []
           cleanupPeriodDays: 14
           hooks: {}
+          skipDangerousModePermissionPrompt: true
           enabledPlugins:
             - test-plugin@claude-plugins-official
           statusLine:
@@ -105,6 +106,7 @@
           - (agent_claude_code_settings_json_final.content | b64decode | from_json).env.ANTHROPIC_API_KEY == 'test-key'
           - (agent_claude_code_settings_json_final.content | b64decode | from_json).alwaysThinkingEnabled == false
           - (agent_claude_code_settings_json_final.content | b64decode | from_json).effortLevel == 'high'
+          - (agent_claude_code_settings_json_final.content | b64decode | from_json).skipDangerousModePermissionPrompt == true
           - (agent_claude_code_user_json_final.content | b64decode | from_json).untouched == true
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers['local-demo'].command == 'node'
           - (agent_claude_code_user_json_final.content | b64decode | from_json).mcpServers.existing.command == 'python3'

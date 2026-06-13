@@ -93,6 +93,9 @@ agent_claude_code_settings:
     deny: []
   cleanupPeriodDays: 30
   hooks: {}
+  # 是否跳过 --dangerously-skip-permissions 模式的二次确认对话；
+  # 通常由 Claude CLI 自行写入，这里允许声明式管理用于无人值守场景。
+  skipDangerousModePermissionPrompt: false
   enabledPlugins: []
   statusLine:
     type: command
