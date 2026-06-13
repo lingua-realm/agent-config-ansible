@@ -68,6 +68,9 @@
     "hooks": {
       "type": "object"
     },
+    "skipDangerousModePermissionPrompt": {
+      "type": "boolean"
+    },
     "statusLine": {
       "type": "object",
       "required": ["type", "command", "padding"],

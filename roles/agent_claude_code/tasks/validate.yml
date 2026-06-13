@@ -39,6 +39,7 @@
           },
           'cleanupPeriodDays': 30,
           'hooks': {},
+          'skipDangerousModePermissionPrompt': false,
           'enabledPlugins': [],
           'statusLine': {
             'type': 'command',
@@ -69,6 +70,7 @@
       - agent_claude_code_settings_normalized.permissions.deny is sequence
       - agent_claude_code_settings_normalized.permissions.deny is not string
       - agent_claude_code_settings_normalized.hooks is mapping
+      - agent_claude_code_settings_normalized.skipDangerousModePermissionPrompt in [true, false]
       - agent_claude_code_settings_normalized.enabledPlugins is sequence
       - agent_claude_code_settings_normalized.enabledPlugins is not string
       - agent_claude_code_settings_normalized.statusLine is mapping

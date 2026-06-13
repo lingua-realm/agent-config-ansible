@@ -65,6 +65,16 @@
     - agent_claude_code_manage_settings | bool
     - agent_claude_code_settings_normalized.effortLevel | length > 0
 
+- name: 验证 settings.json skipDangerousModePermissionPrompt 字段
+  assert:
+    that:
+      - agent_claude_code_settings_data.skipDangerousModePermissionPrompt | default(false) | bool
+        == agent_claude_code_settings_normalized.skipDangerousModePermissionPrompt | bool
+    fail_msg: "settings.json skipDangerousModePermissionPrompt 字段不匹配"
+    success_msg: "✓ settings.json skipDangerousModePermissionPrompt 字段正确"
+  when:
+    - agent_claude_code_manage_settings | bool
+
 - name: 验证 settings.json 启用插件配置
   assert:
     that:

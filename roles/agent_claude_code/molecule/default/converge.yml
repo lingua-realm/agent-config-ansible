@@ -104,6 +104,7 @@
             deny: []
           cleanupPeriodDays: 14
           hooks: {}
+          skipDangerousModePermissionPrompt: true
           enabledPlugins:
             - test-plugin@claude-plugins-official
           statusLine:

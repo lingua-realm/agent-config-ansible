@@ -69,6 +69,7 @@ agent_claude_code_settings:
     deny: []
   cleanupPeriodDays: 30
   hooks: {}
+  skipDangerousModePermissionPrompt: false
   enabledPlugins:
     - example-plugin@claude-plugins-official
   statusLine:
@@ -145,6 +146,7 @@ agent_claude_code_result:
 - `skills` 不再由本 role 直接同步，建议改用 `managed_agent_skills` role 统一管理。
 - 本 role 不管理 `agents` 目录，也不会主动创建它。
 - Claude Opus 4.7+ 建议使用 `alwaysThinkingEnabled: false` 配合 `effortLevel`，避免触发已废弃的 `thinking.enabled` 请求语义。
+- `skipDangerousModePermissionPrompt: true` 仅在你已充分理解 `--dangerously-skip-permissions` 风险并需要无人值守跳过时启用；默认 `false` 时该字段不会写入 `settings.json`，避免覆盖 Claude CLI 自身的接受状态。
 - `agent_claude_code_plugins_to_install` 为空时，会自动使用 `agent_claude_code_settings.enabledPlugins` 作为插件安装目标。
 - `agent_claude_code_output_styles_src` 会自动归一化为以 `/` 结尾的目录同步语义。
 - `agent_claude_code_confirm_settings_update` 和 `agent_claude_code_confirm_user_json_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
