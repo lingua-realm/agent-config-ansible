@@ -28,7 +28,7 @@ claude_code_settings:
     # MCP 超时时间（毫秒）
     MCP_TIMEOUT: "30000"
     # 禁用 Claude Code 注入的时间戳 header，防止KV缓存失效
-    CLAUDE_CODE_ATTRIBUTION_HEADER: 0
+    CLAUDE_CODE_ATTRIBUTION_HEADER: "0"
 
   # ===== 输出风格与语言 =====
   outputStyle: "engineer-professional.md"

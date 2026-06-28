@@ -52,9 +52,9 @@ agent_skills_items:
     agents: "{{ agent_skills_default_agents }}"
     scope: global
 
-  - name: 安装 github/awesome-copilot 官方相关 Skills
+  - name: 安装 trailofbits/skills 的 gh-cli Skill
     state: present
-    source: github/awesome-copilot
+    source: trailofbits/skills
     skills:
       - gh-cli # GitHub CLI 相关技能，提供与 GitHub 仓库、Issue、PR 等交互的能力
     agents: "{{ agent_skills_default_agents }}"
