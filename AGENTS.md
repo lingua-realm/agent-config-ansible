@@ -24,12 +24,14 @@ uv run ansible-playbook playbooks/setup_cursor.yml
 uv run ansible-playbook playbooks/setup_opencode.yml
 uv run ansible-playbook playbooks/setup_opencommit.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
+uv run ansible-playbook playbooks/preheat_agent_mcps.yml
 
 # 显式指定 profile 运行
 scripts/run-playbook.sh <profile> playbooks/setup_codex.yml
 scripts/run-playbook.sh <profile> playbooks/setup_cursor.yml -e "target_hosts=all"
 scripts/run-playbook.sh <profile> playbooks/setup_opencode.yml
 scripts/run-playbook.sh <profile> playbooks/setup_opencommit.yml
+scripts/run-playbook.sh <profile> playbooks/preheat_agent_mcps.yml
 
 # 面向 inventory 中全部主机执行
 uv run ansible-playbook playbooks/setup_claude_code.yml -e "target_hosts=all"
@@ -40,6 +42,7 @@ uv run ansible-playbook playbooks/setup_cursor.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_opencode.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_opencommit.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
+uv run ansible-playbook playbooks/preheat_agent_mcps.yml -e "target_hosts=all"
 
 # Molecule 测试（需进入对应 role 目录）
 cd roles/<role-name>

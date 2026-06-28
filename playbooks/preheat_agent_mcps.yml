@@ -1,0 +1,116 @@
+---
+# playbooks/preheat_agent_mcps.yml
+# 共享 MCP 启动依赖批量预热。
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 读取 agent_mcps 中声明的 stdio MCP 启动命令
+# 2. 在目标机上短暂启动每个命令，让 npx / uvx 下载并缓存固定版本依赖
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/preheat_agent_mcps.yml
+#   scripts/run-playbook.sh <profile> playbooks/preheat_agent_mcps.yml
+#   scripts/run-playbook.sh <profile> playbooks/preheat_agent_mcps.yml -e "target_hosts=all"
+#
+# 可选变量：
+#   -e "mcp_preheat_timeout_sec=120"
+#   -e "mcp_preheat_no_log=false"
+#
+# 注意：
+#   - 预热会执行 MCP 的启动命令，但不会调用任何 MCP 工具。
+#   - 启动后仍在等待 stdio 的服务会在超时后被终止，退出码 124 视为预热成功。
+
+- name: 共享 MCP 启动依赖预热
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+  vars:
+    mcp_preheat_runner: |
+      import subprocess
+      import sys
+
+      timeout = int(sys.argv[1])
+      cmd = sys.argv[2:]
+      print("preheat command: " + " ".join(cmd))
+
+      try:
+          result = subprocess.run(
+              cmd,
+              stdin=subprocess.DEVNULL,
+              text=True,
+              timeout=timeout,
+          )
+          raise SystemExit(result.returncode)
+      except subprocess.TimeoutExpired:
+          print("preheat timeout reached; treating running MCP server as warmed")
+          raise SystemExit(124)
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 校验 MCP 预热输入
+      assert:
+        that:
+          - (agent_mcps | default({})) is mapping
+          - (mcp_preheat_timeout_sec | default(120) | int) > 0
+        fail_msg: >-
+          MCP 预热输入无效：请检查 group_vars/all/agent_mcps/servers.yml
+          中的 agent_mcps 结构，以及 mcp_preheat_timeout_sec。
+      tags:
+        - always
+
+    - name: 校验 MCP 启动命令
+      assert:
+        that:
+          - item.value.command is string
+          - item.value.command | length > 0
+          - (item.value.args | default([])) is sequence
+          - (item.value.args | default([])) is not string
+          - (item.value.env | default({})) is mapping
+        fail_msg: >-
+          MCP {{ item.key }} 预热输入无效：每个条目必须提供 command 字符串，
+          args 必须是列表，env 必须是字典。
+      loop: "{{ agent_mcps | default({}) | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      no_log: "{{ mcp_preheat_no_log | default(true) | bool }}"
+      tags:
+        - always
+
+  tasks:
+    - name: 预热 MCP 启动依赖
+      command:
+        argv: >-
+          {{
+            [
+              ansible_python_interpreter | default('/usr/bin/python3'),
+              '-c',
+              mcp_preheat_runner,
+              mcp_preheat_timeout_sec | default(120) | string,
+              item.value.command
+            ]
+            + (item.value.args | default([]))
+          }}
+      environment: >-
+        {{
+          (item.value.env | default({}))
+          | dict2items
+          | rejectattr('value', 'equalto', '')
+          | items2dict
+        }}
+      register: mcp_preheat_result
+      changed_when: false
+      failed_when: mcp_preheat_result.rc not in [0, 124]
+      loop: "{{ agent_mcps | default({}) | dict2items }}"
+      loop_control:
+        label: "{{ item.key }}"
+      no_log: "{{ mcp_preheat_no_log | default(true) | bool }}"
+      tags:
+        - always

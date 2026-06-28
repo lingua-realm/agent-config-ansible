@@ -14,6 +14,7 @@
 | `playbooks/setup_opencode.yml`     | 部署 OpenCode 的 `opencode.json`、可选 `tui.json`、敏感文件与资产目录 |
 | `playbooks/setup_opencommit.yml`   | 部署 OpenCommit CLI 的 `~/.opencommit`                        |
 | `playbooks/setup_agent_skills.yml` | 通过 `skills` CLI 声明式安装或卸载 skills                     |
+| `playbooks/preheat_agent_mcps.yml` | 批量预热共享 MCP 的 `npx` / `uvx` 启动依赖缓存                |
 
 ## 快速开始
 
@@ -95,6 +96,7 @@ uv run ansible-playbook playbooks/setup_cursor.yml
 uv run ansible-playbook playbooks/setup_opencode.yml
 uv run ansible-playbook playbooks/setup_opencommit.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
+uv run ansible-playbook playbooks/preheat_agent_mcps.yml
 ```
 
 如果要显式指定 profile，使用仓库脚本：
@@ -102,6 +104,7 @@ uv run ansible-playbook playbooks/setup_agent_skills.yml
 ```bash
 scripts/run-playbook.sh personal playbooks/setup_codex.yml
 scripts/run-playbook.sh personal playbooks/setup_cursor.yml -e "target_hosts=all"
+scripts/run-playbook.sh personal playbooks/preheat_agent_mcps.yml
 ```
 
 这个脚本的两个必填参数分别是：
