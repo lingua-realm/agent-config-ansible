@@ -1,0 +1,372 @@
+---
+# playbooks/setup_opencode.yml
+# OpenCode 配置部署（基于本仓库 roles/agent_opencode）
+#
+# 功能：
+# 0. 递归加载 inventory/<profile>/group_vars/all 下的所有 yml/yaml 变量片段
+# 1. 将当前仓库的 opencode_* 变量桥接为 agent_opencode 所需的输入
+# 2. 将共享 agent_mcps 与 OpenCode 覆盖项归一化为 OpenCode 的 mcp 结构
+# 3. 执行 agent_opencode role，完成 opencode.json、tui.json、敏感文件与可选资产目录同步
+#
+# 使用方法：
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_opencode.yml
+#   uv run ansible-playbook -i inventory/default/inventory.yml playbooks/setup_opencode.yml -e "target_hosts=all"
+#
+# 默认变量目录：
+#   inventory/<profile>/group_vars/all/opencode/
+#     - settings.yml
+#     - models.yml
+#     - mcp_servers.yml
+#
+# 默认备份目录（本地连接时）：
+#   <repo>/tmps/opencode-backups/<inventory_hostname>/
+#     - config/
+#     - tui/
+#     - sensitive/
+
+- name: OpenCode 配置部署
+  hosts: "{{ target_hosts | default('localhost') }}"
+  gather_facts: false
+
+  pre_tasks:
+    - name: 递归加载 group_vars/all 变量文件
+      include_vars:
+        dir: "{{ inventory_dir }}/group_vars/all"
+        extensions:
+          - yml
+          - yaml
+        ignore_unknown_extensions: true
+      tags:
+        - always
+
+    - name: 计算 OpenCode 备份根目录
+      set_fact:
+        opencode_backup_root_effective: >-
+          {{
+            opencode_backup_root
+            if (opencode_backup_root is defined)
+            else (
+              (((inventory_dir | dirname) | dirname) ~ '/tmps/opencode-backups/' ~ inventory_hostname)
+              if ((ansible_connection | default('ssh')) == 'local')
+              else ''
+            )
+          }}
+      tags:
+        - always
+
+    - name: 校验 OpenCode 编排输入
+      assert:
+        that:
+          - opencode_settings is mapping
+          - opencode_model_configs is mapping
+          - opencode_use_model is string
+          - opencode_use_model | length > 0
+          - opencode_use_model in opencode_model_configs
+          - (agent_mcps | default({})) is mapping
+          - (opencode_mcp_servers | default({})) is mapping
+          - (opencode_tui_settings | default({})) is mapping
+          - (opencode_secret_files | default({})) is mapping
+          - (opencode_auth | default({})) is mapping
+          - (opencode_mcp_auth | default({})) is mapping
+          - (opencode_asset_dirs | default({})) is mapping
+          - (opencode_model_configs[opencode_use_model].config | default({})) is mapping
+          - (opencode_model_configs[opencode_use_model].secret_files | default({})) is mapping
+        fail_msg: >-
+          OpenCode 编排输入无效：请检查 opencode/settings.yml、models.yml、
+          agent_mcps/servers.yml、opencode/mcp_servers.yml 中的变量结构，
+          尤其是 opencode_use_model、config、secret_files 与 mcp。
+      tags:
+        - always
+
+    - name: 初始化 OpenCode MCP 配置
+      set_fact:
+        opencode_mcp_servers_effective: {}
+      tags:
+        - always
+
+    - name: 校验 OpenCode MCP 条目
+      assert:
+        that:
+          - item.value is mapping
+          - opencode_server_type in ['local', 'stdio', 'http', 'sse', 'remote']
+          - (item.value.args is not defined) or ((item.value.args is sequence) and (item.value.args is not string))
+          - (item.value.cwd is not defined) or (item.value.cwd is string)
+          - (item.value.env is not defined) or (item.value.env is mapping)
+          - (item.value.environment is not defined) or (item.value.environment is mapping)
+          - (item.value.headers is not defined) or (item.value.headers is mapping)
+          - (item.value.enabled is not defined) or (item.value.enabled is boolean)
+          - (item.value.oauth is not defined) or (item.value.oauth is boolean) or (item.value.oauth is mapping)
+          - >-
+            (
+              (opencode_server_type in ['local', 'stdio'])
+              and (item.value.command | default('') is string)
+              and ((item.value.command | default('')) | length > 0)
+            )
+            or
+            (
+              (opencode_server_type in ['http', 'sse', 'remote'])
+              and (item.value.url | default('') is string)
+              and ((item.value.url | default('')) | length > 0)
+            )
+        fail_msg: >-
+          OpenCode MCP 条目 {{ item.key }} 无效：
+          local/stdio 需要 command（args/cwd/env/environment 可选），
+          http/sse/remote 需要 url；headers/environment/env 必须是对象。
+      vars:
+        opencode_server_type: "{{ item.value.type | default('stdio') | lower }}"
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(opencode_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+      tags:
+        - always
+
+    - name: 归一化 OpenCode MCP 配置
+      set_fact:
+        opencode_mcp_servers_effective: >-
+          {{
+            opencode_mcp_servers_effective
+            | combine(
+                {
+                  item.key: opencode_server_effective
+                },
+                recursive=True
+              )
+          }}
+      vars:
+        opencode_server_type: "{{ item.value.type | default('stdio') | lower }}"
+        opencode_local_env: >-
+          {{
+            (
+              item.value.environment | default({})
+            )
+            | combine(
+                (
+                  item.value.env | default({})
+                  | dict2items
+                  | rejectattr('value', 'equalto', '')
+                  | items2dict
+                ),
+                recursive=True
+              )
+          }}
+        opencode_timeout_effective: >-
+          {{
+            item.value.timeout
+            if (item.value.timeout is defined)
+            else (
+              (item.value.startup_timeout_sec | int) * 1000
+              if (item.value.startup_timeout_sec is defined)
+              else none
+            )
+          }}
+        opencode_local_payload: >-
+          {{
+            item.value
+            | dict2items
+            | rejectattr('key', 'equalto', 'type')
+            | rejectattr('key', 'equalto', 'command')
+            | rejectattr('key', 'equalto', 'args')
+            | rejectattr('key', 'equalto', 'env')
+            | rejectattr('key', 'equalto', 'environment')
+            | rejectattr('key', 'equalto', 'headers')
+            | rejectattr('key', 'equalto', 'url')
+            | rejectattr('key', 'equalto', 'oauth')
+            | rejectattr('key', 'equalto', 'bearer_token_env_var')
+            | rejectattr('key', 'equalto', 'startup_timeout_sec')
+            | rejectattr('key', 'equalto', 'timeout')
+            | items2dict
+          }}
+        opencode_remote_payload: >-
+          {{
+            item.value
+            | dict2items
+            | rejectattr('key', 'equalto', 'type')
+            | rejectattr('key', 'equalto', 'command')
+            | rejectattr('key', 'equalto', 'args')
+            | rejectattr('key', 'equalto', 'env')
+            | rejectattr('key', 'equalto', 'environment')
+            | rejectattr('key', 'equalto', 'bearer_token_env_var')
+            | rejectattr('key', 'equalto', 'startup_timeout_sec')
+            | rejectattr('key', 'equalto', 'timeout')
+            | rejectattr('key', 'equalto', 'headers')
+            | items2dict
+          }}
+        opencode_remote_headers: >-
+          {{
+            (
+              (
+                {'Authorization': 'Bearer {env:' ~ item.value.bearer_token_env_var ~ '}'}
+                if ((item.value.bearer_token_env_var | default('')) | length > 0)
+                else {}
+              )
+              | combine(item.value.headers | default({}), recursive=True)
+            )
+          }}
+        opencode_timeout_payload: >-
+          {{
+            {'timeout': opencode_timeout_effective}
+            if (opencode_timeout_effective is not none)
+            else {}
+          }}
+        opencode_server_effective: >-
+          {{
+            (
+              {
+                'type': 'local',
+                'command': [item.value.command] + (item.value.args | default([]))
+              }
+              | combine(opencode_local_payload, recursive=True)
+              | combine(
+                  (opencode_local_env | length > 0)
+                  | ternary({'environment': opencode_local_env}, {}),
+                  recursive=True
+                )
+              | combine(opencode_timeout_payload, recursive=True)
+            )
+            if opencode_server_type in ['local', 'stdio']
+            else
+            (
+              {
+                'type': 'remote'
+              }
+              | combine(opencode_remote_payload, recursive=True)
+              | combine(
+                  (opencode_remote_headers | length > 0)
+                  | ternary({'headers': opencode_remote_headers}, {}),
+                  recursive=True
+                )
+              | combine(opencode_timeout_payload, recursive=True)
+            )
+          }}
+      loop: >-
+        {{
+          (
+            (agent_mcps | default({}))
+            | combine(opencode_mcp_servers | default({}), recursive=True)
+          )
+          | dict2items
+        }}
+      loop_control:
+        label: "{{ item.key }}"
+      tags:
+        - always
+
+    - name: 归一化 agent_opencode 输入变量
+      set_fact:
+        opencode_settings_effective: >-
+          {{
+            {
+              '$schema': 'https://opencode.ai/config.json',
+              'provider': {},
+              'mcp': {}
+            } | combine(opencode_settings, recursive=True)
+          }}
+        opencode_active_model_config_effective: "{{ opencode_model_configs[opencode_use_model] }}"
+        opencode_confirm_config_update_effective: "{{ opencode_confirm_config_update | default(true) }}"
+        opencode_confirm_tui_config_update_effective: "{{ opencode_confirm_tui_config_update | default(true) }}"
+        opencode_confirm_sensitive_update_effective: "{{ opencode_confirm_sensitive_update | default(true) }}"
+      tags:
+        - always
+
+    - name: 归一化派生 OpenCode 配置变量
+      set_fact:
+        opencode_config_effective: >-
+          {%- set _model_config = opencode_active_model_config_effective.config | default({}) -%}
+          {%- set _merged = opencode_settings_effective | combine(_model_config, recursive=True) -%}
+          {{
+            _merged
+            | combine(
+                {
+                  'provider': (
+                    opencode_settings_effective.provider | default({})
+                  ) | combine(
+                    _model_config.provider | default({}),
+                    recursive=True
+                  ),
+                  'mcp': (
+                    opencode_settings_effective.mcp | default({})
+                  ) | combine(
+                    _model_config.mcp | default({}),
+                    recursive=True
+                  ) | combine(
+                    opencode_mcp_servers_effective,
+                    recursive=True
+                  )
+                },
+                recursive=True
+              )
+          }}
+        opencode_secret_files_effective: >-
+          {{
+            (opencode_active_model_config_effective.secret_files | default({}))
+            | combine(opencode_secret_files | default({}), recursive=True)
+          }}
+      tags:
+        - always
+
+  tasks:
+    - name: 执行 agent_opencode 角色
+      include_role:
+        name: agent_opencode
+      vars:
+        agent_opencode_config_dir: "{{ opencode_config_dir | default(lookup('env', 'HOME') ~ '/.config/opencode') }}"
+        agent_opencode_data_dir: "{{ opencode_data_dir | default(lookup('env', 'HOME') ~ '/.local/share/opencode') }}"
+        agent_opencode_config_path: >-
+          {{
+            opencode_config_path
+            | default((opencode_config_dir | default(lookup('env', 'HOME') ~ '/.config/opencode')) ~ '/opencode.json')
+          }}
+        agent_opencode_tui_config_path: >-
+          {{
+            opencode_tui_config_path
+            | default((opencode_config_dir | default(lookup('env', 'HOME') ~ '/.config/opencode')) ~ '/tui.json')
+          }}
+        agent_opencode_auth_path: >-
+          {{
+            opencode_auth_path
+            | default((opencode_data_dir | default(lookup('env', 'HOME') ~ '/.local/share/opencode')) ~ '/auth.json')
+          }}
+        agent_opencode_mcp_auth_path: >-
+          {{
+            opencode_mcp_auth_path
+            | default((opencode_data_dir | default(lookup('env', 'HOME') ~ '/.local/share/opencode')) ~ '/mcp-auth.json')
+          }}
+        agent_opencode_secret_dir: >-
+          {{
+            opencode_secret_dir
+            | default((opencode_data_dir | default(lookup('env', 'HOME') ~ '/.local/share/opencode')) ~ '/managed-secrets')
+          }}
+        agent_opencode_temp_root: "{{ opencode_temp_root | default('/tmp/agent-opencode') }}"
+        agent_opencode_require_opencode_cli: "{{ opencode_require_opencode_cli | default(true) | bool }}"
+        agent_opencode_opencode_auto_install_npm: "{{ opencode_auto_install_npm | default('opencode-ai') }}"
+        agent_opencode_manage_config: "{{ opencode_manage_config | default(true) | bool }}"
+        agent_opencode_manage_tui_config: "{{ opencode_manage_tui_config | default(opencode_tui_settings | default({}) | length > 0) | bool }}"
+        agent_opencode_manage_secret_files: "{{ opencode_manage_secret_files | default(opencode_secret_files_effective | length > 0) | bool }}"
+        agent_opencode_manage_auth: "{{ opencode_manage_auth | default(false) | bool }}"
+        agent_opencode_manage_mcp_auth: "{{ opencode_manage_mcp_auth | default(false) | bool }}"
+        agent_opencode_manage_assets: "{{ opencode_manage_assets | default(opencode_asset_dirs | default({}) | length > 0) | bool }}"
+        agent_opencode_run_verify: "{{ opencode_run_verify | default(true) | bool }}"
+        agent_opencode_verify_schema: "{{ opencode_verify_schema | default(false) | bool }}"
+        agent_opencode_config_schemafile: "{{ opencode_config_schemafile | default('https://opencode.ai/config.json') }}"
+        agent_opencode_tui_schemafile: "{{ opencode_tui_schemafile | default('https://opencode.ai/tui.json') }}"
+        agent_opencode_confirm_config_update: "{{ opencode_confirm_config_update_effective | bool }}"
+        agent_opencode_confirm_tui_config_update: "{{ opencode_confirm_tui_config_update_effective | bool }}"
+        agent_opencode_confirm_sensitive_update: "{{ opencode_confirm_sensitive_update_effective | bool }}"
+        agent_opencode_backup: "{{ opencode_backup | default(true) | bool }}"
+        agent_opencode_backup_root: "{{ opencode_backup_root_effective }}"
+        agent_opencode_config: "{{ opencode_config_effective }}"
+        agent_opencode_tui_config: "{{ opencode_tui_settings | default({}) }}"
+        agent_opencode_secret_files: "{{ opencode_secret_files_effective }}"
+        agent_opencode_auth: "{{ opencode_auth | default({}) }}"
+        agent_opencode_mcp_auth: "{{ opencode_mcp_auth | default({}) }}"
+        agent_opencode_asset_dirs: "{{ opencode_asset_dirs | default({}) }}"
+        agent_opencode_asset_delete: "{{ opencode_asset_delete | default(true) | bool }}"
+      tags:
+        - always

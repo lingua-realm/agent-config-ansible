@@ -1,0 +1,15 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 4：同步 OpenCode 敏感文件
+      ========================================
+
+- name: 同步 OpenCode 敏感文件
+  include_tasks: sync_sensitive_file.yml
+  loop: "{{ agent_opencode_sensitive_files_effective }}"
+  loop_control:
+    loop_var: agent_opencode_sensitive_file
+    label: "{{ agent_opencode_sensitive_file.name }}"
+  no_log: true

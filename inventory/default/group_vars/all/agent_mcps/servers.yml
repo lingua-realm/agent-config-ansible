@@ -1,5 +1,5 @@
 # Agent 通用 MCP 服务器配置
-# 这里维护 Claude Code / Codex CLI / Gemini CLI / GitHub Copilot CLI / Cursor 共用的默认 MCP 定义。
+# 这里维护 Claude Code / Codex CLI / Gemini CLI / GitHub Copilot CLI / Cursor / OpenCode 共用的默认 MCP 定义。
 #
 # 覆盖规则：
 # - Claude Code 可在 group_vars/all/claude_code/mcp_servers.yml 的
@@ -12,10 +12,12 @@
 #   copilot_cli_mcp_servers 下按同名服务覆盖或补充。
 # - Cursor 可在 group_vars/all/cursor/mcp_servers.yml 的 cursor_mcp_servers 下
 #   按同名服务覆盖或补充。
+# - OpenCode 可在 group_vars/all/opencode/mcp_servers.yml 的 opencode_mcp_servers 下
+#   按同名服务覆盖或补充。
 #
 # 统一结构使用显式 type 字段：
 #   stdio: command + args (+ env 可选)
-#   http:  url (+ headers / bearer_token_env_var 可选)
+#   http/remote:  url (+ headers / bearer_token_env_var 可选)
 
 agent_mcps:
   # 用于自动获取网络内容，并转换成 Markdown 格式给 Agent

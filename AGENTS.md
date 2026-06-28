@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents working in this repository.
 
 ## 项目快照
 
-这是一个基于 Ansible 的 AI Agent / AI CLI 配置管理仓库，目标是把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor、OpenCommit 以及 agent skills 以声明式方式同步到本地或远端主机。
+这是一个基于 Ansible 的 AI Agent / AI CLI 配置管理仓库，目标是把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor、OpenCode、OpenCommit 以及 agent skills 以声明式方式同步到本地或远端主机。
 
 仓库根目录的 `AGENTS.md` 用于约束你在这个代码仓库里的工作方式；`inventory/<profile>/codex_assets/AGENTS.md` 和 `inventory/<profile>/gemini_assets/GEMINI.md` 则是样例资产，会被同步到目标机的用户级指令文件，两者不要混淆。
 
@@ -21,12 +21,14 @@ uv run ansible-playbook playbooks/setup_codex.yml
 uv run ansible-playbook playbooks/setup_gemini_cli.yml
 uv run ansible-playbook playbooks/setup_copilot_cli.yml
 uv run ansible-playbook playbooks/setup_cursor.yml
+uv run ansible-playbook playbooks/setup_opencode.yml
 uv run ansible-playbook playbooks/setup_opencommit.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
 
 # 显式指定 profile 运行
 scripts/run-playbook.sh <profile> playbooks/setup_codex.yml
 scripts/run-playbook.sh <profile> playbooks/setup_cursor.yml -e "target_hosts=all"
+scripts/run-playbook.sh <profile> playbooks/setup_opencode.yml
 scripts/run-playbook.sh <profile> playbooks/setup_opencommit.yml
 
 # 面向 inventory 中全部主机执行
@@ -35,6 +37,7 @@ uv run ansible-playbook playbooks/setup_codex.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_gemini_cli.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_copilot_cli.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_cursor.yml -e "target_hosts=all"
+uv run ansible-playbook playbooks/setup_opencode.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_opencommit.yml -e "target_hosts=all"
 uv run ansible-playbook playbooks/setup_agent_skills.yml -e "target_hosts=all"
 
@@ -78,6 +81,11 @@ agent_cursor
   ├── npm_command_bootstrap
   └── managed_json_merge
 
+agent_opencode
+  ├── npm_command_bootstrap
+  ├── managed_file
+  └── managed_tree
+
 managed_agent_skills
   └── npm_command_bootstrap
 ```
@@ -90,6 +98,7 @@ managed_agent_skills
 - `opencommit_cli`：检查 OpenCommit CLI，生成 `~/.opencommit`。
 - `agent_copilot_cli`：检查 Copilot CLI，生成并验证 `~/.copilot/mcp-config.json`。
 - `agent_cursor`：检查 Cursor Agent CLI（`agent`），生成并验证 `~/.cursor/mcp.json`。
+- `agent_opencode`：检查 OpenCode CLI，生成 `~/.config/opencode/opencode.json` 和可选 `tui.json`，同步受管密钥文件、可选认证文件与资产目录。
 - `managed_agent_skills`：基于 `skills` CLI 声明式安装或卸载 skills。
 
 ### 基础能力 role
@@ -106,13 +115,14 @@ playbooks/                     # 顶层入口
 roles/                         # 所有 Ansible roles
 inventory/default/             # 默认 inventory 示例
 inventory/default/group_vars/all/
-  ├── agent_mcps/              # Claude / Codex / Copilot / Cursor 共享 MCP 默认值
+  ├── agent_mcps/              # Claude / Codex / Copilot / Cursor / OpenCode 共享 MCP 默认值
   ├── agent_skills/            # skills CLI 与条目声明
   ├── claude_code/             # Claude Code 设置、模型、MCP 覆盖
   ├── codex/                   # Codex 设置、模型、MCP 覆盖
   ├── gemini_cli/              # Gemini CLI 设置、模型、MCP 覆盖
   ├── copilot_cli/             # Copilot CLI 设置、MCP 覆盖
   ├── cursor/                  # Cursor 设置、MCP 覆盖
+  ├── opencode/                # OpenCode 设置、模型、MCP 覆盖
   ├── opencommit/              # OpenCommit 设置与模型覆盖
   └── secrets.yml              # inventory 级敏感信息
 inventory/default/claude_assets/
@@ -158,8 +168,9 @@ tmps/                          # 本地执行时的默认备份和日志目录
 ### 4. 共享 MCP 与 agent 覆盖要分层维护
 
 - 共享默认值维护在 `group_vars/all/agent_mcps/servers.yml` 的 `agent_mcps` 下。
-- Claude、Codex、Gemini、Copilot、Cursor 的差异化覆盖分别放在各自 `mcp_servers.yml`。
-- Claude Code 需要 `mcpServers` 结构，Codex 需要 `mcp_servers`，Gemini CLI 需要 `mcpServers`，Copilot CLI 需要 `mcpServers` 且每个条目带 `tools`，Cursor 需要 `mcpServers`；这些转换发生在对应 playbook 的 `pre_tasks`。
+- Claude、Codex、Gemini、Copilot、Cursor、OpenCode 的差异化覆盖分别放在各自 `mcp_servers.yml`。
+- Claude Code 需要 `mcpServers` 结构，Codex 需要 `mcp_servers`，Gemini CLI 需要 `mcpServers`，Copilot CLI 需要 `mcpServers` 且每个条目带 `tools`，Cursor 需要 `mcpServers`，OpenCode 需要 `mcp`；这些转换发生在对应 playbook 的 `pre_tasks`。
+- OpenCode 本地 MCP 使用 `type: local` 和数组形式 `command`，远端 MCP 使用 `type: remote` 与 `url`。
 
 ### 5. include_role 传路径时先固化 `role_path`
 
@@ -177,12 +188,13 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `setup_opencommit.yml` 会把 `opencommit/settings.yml` 与 `models.yml` 归一化成单个 `opencommit_cli_config` 输入，并同步到 `~/.opencommit`。
 - `setup_copilot_cli.yml` 当前只管理 `~/.copilot/mcp-config.json`，不负责 Copilot CLI 账号、模型或其他偏好设置。
 - `setup_cursor.yml` 当前只管理 `~/.cursor/mcp.json`，供 Cursor 编辑器与 Cursor Agent CLI 共享使用，不负责账号、模型或其他偏好设置。
+- `setup_opencode.yml` 会把 `opencode/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `opencode/mcp_servers.yml` 归一化成单个 `agent_opencode_config` 输入，并可写入 `~/.local/share/opencode/managed-secrets/` 中的密钥文件；`auth.json` / `mcp-auth.json` 支持但默认不管理。
 - `managed_agent_skills` 的 `source` 必须对目标机可见；仓库内路径通常只适用于 `ansible_connection=local`。
 - `ansible.cfg` 中启用了 `any_errors_fatal = True` 和 `gathering = explicit`，所以失败会立刻终止，facts 也不会默认收集。
 
 ## CI 与升级细节
 
-- `.github/workflows/ci.yml` 会在每次 `push` 时触发，先对 7 个入口 playbook 做 `--syntax-check`，再用 matrix 分别执行 `claude_code`、`codex`、`gemini_cli`、`copilot_cli`、`cursor`、`opencommit`，并在每个矩阵实例后执行 `setup_agent_skills.yml`。
+- `.github/workflows/ci.yml` 会在每次 `push` 时触发，先对 8 个入口 playbook 做 `--syntax-check`，再用 matrix 分别执行 `claude_code`、`codex`、`gemini_cli`、`copilot_cli`、`cursor`、`opencode`、`opencommit`，并在每个矩阵实例后执行 `setup_agent_skills.yml`。
 - CI 当前固定使用 `inventory/default/inventory.yml` 的 localhost 配置，不会自动切换到其他 profile。
 - 当前 CI 依赖的 Repository Secrets 只有 `VOLCES_API_KEY` 和 `PPIO_API_KEY`。
 - CI 会通过 extra vars 显式设置这些确认项为 `false` 以实现无人值守：
@@ -190,6 +202,9 @@ tmps/                          # 本地执行时的默认备份和日志目录
   - `claude_code_confirm_user_json_update`
   - `copilot_cli_confirm_mcp_config_update`
   - `cursor_confirm_mcp_config_update`
+  - `opencode_confirm_config_update`
+  - `opencode_confirm_tui_config_update`
+  - `opencode_confirm_sensitive_update`
   - `codex_confirm_config_update`
   - `codex_confirm_env_update`
   - `gemini_confirm_settings_update`
@@ -219,6 +234,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `agent_codex` 的验证依赖目标端 Python 内置 `tomllib`，目标主机需要 Python `>=3.11`。
 - `agent_gemini_cli` 的验证依赖目标端 Python 内置 `json`，默认用户级输出包括 `~/.gemini/settings.json`、`~/.gemini/.env` 和 `~/GEMINI.md`。
 - `opencommit_cli` 的验证依赖目标端 Python 内置 `json`，默认用户级输出为 `~/.opencommit`。
+- `agent_opencode` 的验证依赖目标端 Python 内置 `json`，默认用户级输出包括 `~/.config/opencode/opencode.json`、可选 `~/.config/opencode/tui.json` 和 `~/.local/share/opencode/managed-secrets/*`。
 
 如果你修改了某个 role，优先在对应 role 目录下运行相关 Molecule 场景，而不是只做静态阅读。
 

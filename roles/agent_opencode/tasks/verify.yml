@@ -1,0 +1,166 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 6：验证 OpenCode 配置结果
+      ========================================
+
+- name: 检查 opencode.json 是否存在
+  stat:
+    path: "{{ agent_opencode_config_path }}"
+  register: agent_opencode_config_stat
+  when: agent_opencode_manage_config | bool
+
+- name: 验证 opencode.json 存在
+  assert:
+    that:
+      - agent_opencode_config_stat.stat.exists
+      - agent_opencode_config_stat.stat.isreg
+    fail_msg: "opencode.json 不存在"
+    success_msg: "✓ opencode.json 已生成"
+  when: agent_opencode_manage_config | bool
+
+- name: 解析 opencode.json
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+      - "{{ agent_opencode_config_path }}"
+  register: agent_opencode_config_parse
+  changed_when: false
+  when: agent_opencode_manage_config | bool
+
+- name: 保存解析后的 opencode.json
+  set_fact:
+    agent_opencode_config_data: "{{ agent_opencode_config_parse.stdout | from_json }}"
+  changed_when: false
+  when: agent_opencode_manage_config | bool
+
+- name: 验证 opencode.json 已正确写入
+  assert:
+    that:
+      - agent_opencode_config_data == agent_opencode_config_normalized
+    fail_msg: "opencode.json 内容与期望配置不一致"
+    success_msg: "✓ opencode.json 内容正确"
+  when: agent_opencode_manage_config | bool
+
+- name: 检查 tui.json 是否存在
+  stat:
+    path: "{{ agent_opencode_tui_config_path }}"
+  register: agent_opencode_tui_config_stat
+  when: agent_opencode_should_manage_tui_config | bool
+
+- name: 验证 tui.json 存在
+  assert:
+    that:
+      - agent_opencode_tui_config_stat.stat.exists
+      - agent_opencode_tui_config_stat.stat.isreg
+    fail_msg: "tui.json 不存在"
+    success_msg: "✓ tui.json 已生成"
+  when: agent_opencode_should_manage_tui_config | bool
+
+- name: 解析 tui.json
+  command:
+    argv:
+      - "{{ ansible_python_interpreter | default('/usr/bin/python3') }}"
+      - -c
+      - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+      - "{{ agent_opencode_tui_config_path }}"
+  register: agent_opencode_tui_config_parse
+  changed_when: false
+  when: agent_opencode_should_manage_tui_config | bool
+
+- name: 验证 tui.json 已正确写入
+  assert:
+    that:
+      - (agent_opencode_tui_config_parse.stdout | from_json) == agent_opencode_tui_config_normalized
+    fail_msg: "tui.json 内容与期望配置不一致"
+    success_msg: "✓ tui.json 内容正确"
+  when: agent_opencode_should_manage_tui_config | bool
+
+- name: 验证 OpenCode 敏感文件已同步
+  stat:
+    path: "{{ item.path }}"
+  register: agent_opencode_sensitive_verify_stats
+  loop: "{{ agent_opencode_sensitive_results }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: agent_opencode_should_manage_sensitive_files | bool
+
+- name: 断言 OpenCode 敏感文件状态
+  assert:
+    that:
+      - item.stat.exists
+      - item.stat.isreg
+      - item.stat.mode == item.item.mode
+    fail_msg: "OpenCode 敏感文件未正确同步或权限不正确"
+    success_msg: "✓ OpenCode 敏感文件权限正确"
+  loop: "{{ agent_opencode_sensitive_verify_stats.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+  when: agent_opencode_should_manage_sensitive_files | bool
+
+- name: 检查 OpenCode 资产目录
+  stat:
+    path: "{{ agent_opencode_config_dir }}/{{ item.key }}"
+  register: agent_opencode_asset_verify_stats
+  loop: "{{ agent_opencode_asset_dirs | dict2items }}"
+  loop_control:
+    label: "{{ item.key }}"
+  when: agent_opencode_should_manage_assets | bool
+
+- name: 断言 OpenCode 资产目录状态
+  assert:
+    that:
+      - item.stat.exists
+      - item.stat.isdir
+    fail_msg: "OpenCode 资产目录未正确同步"
+    success_msg: "✓ OpenCode 资产目录已同步"
+  loop: "{{ agent_opencode_asset_verify_stats.results }}"
+  loop_control:
+    label: "{{ item.item.key }}"
+  when: agent_opencode_should_manage_assets | bool
+
+- name: 执行 OpenCode opencode.json Schema 校验
+  when:
+    - agent_opencode_manage_config | bool
+    - agent_opencode_verify_schema | bool
+  block:
+    - name: 在控制端创建 OpenCode opencode.json Schema 校验临时文件
+      tempfile:
+        state: file
+        suffix: .json
+      register: agent_opencode_config_schema_temp
+      delegate_to: localhost
+      become: false
+
+    - name: 写入 OpenCode opencode.json 到控制端临时文件
+      copy:
+        dest: "{{ agent_opencode_config_schema_temp.path }}"
+        content: "{{ agent_opencode_config_parse.stdout }}"
+        mode: "0600"
+      delegate_to: localhost
+      become: false
+
+    - name: 校验 OpenCode opencode.json Schema
+      command:
+        argv:
+          - check-jsonschema
+          - --schemafile
+          - "{{ agent_opencode_config_schemafile }}"
+          - "{{ agent_opencode_config_schema_temp.path }}"
+      changed_when: false
+      delegate_to: localhost
+      become: false
+  always:
+    - name: 清理 OpenCode opencode.json Schema 校验临时文件
+      file:
+        path: "{{ agent_opencode_config_schema_temp.path }}"
+        state: absent
+      delegate_to: localhost
+      become: false
+      when:
+        - agent_opencode_config_schema_temp is defined
+        - agent_opencode_config_schema_temp.path is defined

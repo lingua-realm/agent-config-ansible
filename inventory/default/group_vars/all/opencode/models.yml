@@ -1,0 +1,23 @@
+# OpenCode 模型配置
+# config 会合并到 ~/.config/opencode/opencode.json
+# secret_files 会写入 ~/.local/share/opencode/managed-secrets/
+
+opencode_model_configs:
+  ppio_gpt5_4:
+    config:
+      model: "ppio/pa/gpt-5.4"
+      small_model: "ppio/pa/gpt-5.4"
+      provider:
+        ppio:
+          npm: "@ai-sdk/openai"
+          name: "PPIO (GPT-5.4)"
+          options:
+            baseURL: "https://api.ppio.com/openai/v1"
+            apiKey: "{file:~/.local/share/opencode/managed-secrets/ppio-api-key}"
+          models:
+            "pa/gpt-5.4":
+              name: "PPIO GPT-5.4"
+    secret_files:
+      ppio-api-key: "{{ (secrets | default({})).get('api_keys', {}).get('ppio', '') }}"
+
+opencode_use_model: ppio_gpt5_4

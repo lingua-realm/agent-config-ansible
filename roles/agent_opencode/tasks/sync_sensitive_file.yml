@@ -1,0 +1,155 @@
+---
+- name: 计算 OpenCode 敏感文件临时路径
+  set_fact:
+    agent_opencode_sensitive_temp_path: >-
+      {{ agent_opencode_temp_root }}/{{ agent_opencode_sensitive_file.name | regex_replace('[^A-Za-z0-9_.-]+', '_') }}.sensitive.rendered
+    agent_opencode_sensitive_backup_path: ""
+  changed_when: false
+
+- name: 确保 OpenCode 敏感文件目标目录存在
+  file:
+    path: "{{ agent_opencode_sensitive_file.path | dirname }}"
+    state: directory
+    mode: "0700"
+
+- name: 写入 OpenCode 敏感文件临时内容
+  copy:
+    dest: "{{ agent_opencode_sensitive_temp_path }}"
+    content: "{{ agent_opencode_sensitive_file.content }}"
+    mode: "{{ agent_opencode_sensitive_file.mode }}"
+  changed_when: false
+
+- name: 检查现有 OpenCode 敏感文件
+  stat:
+    path: "{{ agent_opencode_sensitive_file.path }}"
+    checksum_algorithm: sha256
+  register: agent_opencode_sensitive_existing
+
+- name: 检查新 OpenCode 敏感文件
+  stat:
+    path: "{{ agent_opencode_sensitive_temp_path }}"
+    checksum_algorithm: sha256
+  register: agent_opencode_sensitive_new
+
+- name: 计算 OpenCode 敏感文件内容和权限状态
+  set_fact:
+    agent_opencode_sensitive_file_content_changed: >-
+      {{
+        (not agent_opencode_sensitive_existing.stat.exists)
+        or (
+          (agent_opencode_sensitive_existing.stat.checksum | default(''))
+          != (agent_opencode_sensitive_new.stat.checksum | default(''))
+        )
+      }}
+    agent_opencode_sensitive_file_mode_changed: >-
+      {{
+        agent_opencode_sensitive_existing.stat.exists
+        and (
+          (agent_opencode_sensitive_existing.stat.mode | default(''))
+          != agent_opencode_sensitive_file.mode
+        )
+      }}
+    agent_opencode_sensitive_file_created: "{{ not agent_opencode_sensitive_existing.stat.exists }}"
+  changed_when: false
+
+- name: 汇总 OpenCode 敏感文件是否变更
+  set_fact:
+    agent_opencode_sensitive_file_changed: >-
+      {{
+        (agent_opencode_sensitive_file_content_changed | bool)
+        or (agent_opencode_sensitive_file_mode_changed | bool)
+      }}
+  changed_when: false
+
+- name: 询问是否继续更新 OpenCode 敏感文件
+  pause:
+    prompt: |
+      ========================================
+      检测到 OpenCode 敏感文件变更
+      ========================================
+      文件：{{ agent_opencode_sensitive_file.path }}
+      差异内容不会显示。
+
+      是否继续？(yes/no)
+  when:
+    - agent_opencode_sensitive_file_changed | bool
+    - agent_opencode_confirm_sensitive_update | bool
+  register: agent_opencode_sensitive_user_confirmation
+
+- name: 确认用户选择（OpenCode 敏感文件）
+  fail:
+    msg: "用户取消了 OpenCode 敏感文件更新：{{ agent_opencode_sensitive_file.path }}"
+  when:
+    - agent_opencode_sensitive_file_changed | bool
+    - agent_opencode_confirm_sensitive_update | bool
+    - agent_opencode_sensitive_user_confirmation.user_input | default('') | lower not in ['yes', 'y']
+
+- name: 确保 OpenCode 敏感文件备份目录存在
+  file:
+    path: "{{ agent_opencode_sensitive_backup_dir }}"
+    state: directory
+    mode: "0700"
+  when:
+    - agent_opencode_backup | bool
+    - agent_opencode_sensitive_existing.stat.exists
+    - agent_opencode_sensitive_file_content_changed | bool
+
+- name: 生成 OpenCode 敏感文件备份路径
+  set_fact:
+    agent_opencode_sensitive_backup_path: >-
+      {{ agent_opencode_sensitive_backup_dir }}/{{ agent_opencode_sensitive_file.backup_prefix }}.{{ now(fmt='%Y%m%d_%H%M%S') }}
+  when:
+    - agent_opencode_backup | bool
+    - agent_opencode_sensitive_existing.stat.exists
+    - agent_opencode_sensitive_file_content_changed | bool
+  changed_when: false
+
+- name: 备份现有 OpenCode 敏感文件
+  copy:
+    src: "{{ agent_opencode_sensitive_file.path }}"
+    dest: "{{ agent_opencode_sensitive_backup_path }}"
+    remote_src: true
+    mode: "{{ agent_opencode_sensitive_file.mode }}"
+  when:
+    - agent_opencode_backup | bool
+    - agent_opencode_sensitive_existing.stat.exists
+    - agent_opencode_sensitive_file_content_changed | bool
+
+- name: 更新 OpenCode 敏感文件
+  copy:
+    src: "{{ agent_opencode_sensitive_temp_path }}"
+    dest: "{{ agent_opencode_sensitive_file.path }}"
+    remote_src: true
+    mode: "{{ agent_opencode_sensitive_file.mode }}"
+  when: agent_opencode_sensitive_file_changed | bool
+
+- name: 记录 OpenCode 敏感文件同步结果
+  set_fact:
+    agent_opencode_sensitive_results: >-
+      {{
+        agent_opencode_sensitive_results
+        + [
+          {
+            'name': agent_opencode_sensitive_file.name,
+            'path': agent_opencode_sensitive_file.path,
+            'changed': agent_opencode_sensitive_file_changed | bool,
+            'content_changed': agent_opencode_sensitive_file_content_changed | bool,
+            'mode_changed': agent_opencode_sensitive_file_mode_changed | bool,
+            'created': agent_opencode_sensitive_file_created | bool,
+            'mode': agent_opencode_sensitive_file.mode,
+            'backup_path': agent_opencode_sensitive_backup_path
+          }
+        ]
+      }}
+    agent_opencode_sensitive_changed: >-
+      {{
+        (agent_opencode_sensitive_changed | bool)
+        or (agent_opencode_sensitive_file_changed | bool)
+      }}
+  changed_when: false
+
+- name: 清理 OpenCode 敏感文件临时文件
+  file:
+    path: "{{ agent_opencode_sensitive_temp_path }}"
+    state: absent
+  changed_when: false
