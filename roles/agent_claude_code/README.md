@@ -4,7 +4,7 @@
 
 - 检查 Claude CLI 与可选的 `ccline`，支持 Claude CLI 缺失时自动安装
 - 管理插件 marketplace 与插件安装
-- deep merge `~/.claude.json`
+- 同步 `~/.claude.json`（默认仅对 `mcpServers` 做严格替换，其他字段保持合并语义）
 - 生成并同步 `~/.claude/settings.json`
 - 按需同步外部 `output-styles` 和 `CLAUDE.md`
 
@@ -44,7 +44,8 @@
 | `agent_claude_code_plugin_marketplaces` | ❌ | 内置官方 marketplace | 插件 marketplace 名称到 URL 的映射 |
 | `agent_claude_code_plugins_to_install` | ❌ | `[]` | 显式安装的插件列表；为空时回退到 `settings.enabledPlugins` |
 | `agent_claude_code_settings` | ✅ | 见 defaults | 用于生成 `settings.json` 的配置对象 |
-| `agent_claude_code_user_json` | ❌ | `hasCompletedOnboarding + 空 mcpServers` | 将被 deep merge 到 `~/.claude.json` 的对象 |
+| `agent_claude_code_mcp_servers_mode` | ❌ | `replace` | `replace`：严格替换 `mcpServers`；`merge`：增量合并 `mcpServers` |
+| `agent_claude_code_user_json` | ❌ | `hasCompletedOnboarding + 空 mcpServers` | 写入 `~/.claude.json` 的对象（`mcpServers` 行为受 `agent_claude_code_mcp_servers_mode` 控制） |
 | `agent_claude_code_output_styles_src` | ❌ | `""` | 外部 output-styles 目录路径；为空时不管理 |
 | `agent_claude_code_claude_md_src` | ❌ | `""` | 外部 `CLAUDE.md` 文件路径；为空时不管理 |
 | `agent_claude_code_output_styles_delete` | ❌ | `true` | 同步 output-styles 时是否删除目标端多余文件 |
@@ -148,6 +149,7 @@ agent_claude_code_result:
 - Claude Opus 4.7+ 建议使用 `alwaysThinkingEnabled: false` 配合 `effortLevel`，避免触发已废弃的 `thinking.enabled` 请求语义。
 - `skipDangerousModePermissionPrompt: true` 仅在你已充分理解 `--dangerously-skip-permissions` 风险并需要无人值守跳过时启用；默认 `false` 时该字段不会写入 `settings.json`，避免覆盖 Claude CLI 自身的接受状态。
 - `agent_claude_code_plugins_to_install` 为空时，会自动使用 `agent_claude_code_settings.enabledPlugins` 作为插件安装目标。
+- `agent_claude_code_mcp_servers_mode` 默认为 `replace`，会删除 `~/.claude.json` 中未声明的 MCP 条目；若需兼容旧行为可设为 `merge`。
 - `agent_claude_code_output_styles_src` 会自动归一化为以 `/` 结尾的目录同步语义。
 - `agent_claude_code_confirm_settings_update` 和 `agent_claude_code_confirm_user_json_update` 适用于手动执行 playbook 的交互确认；如果是无人值守执行，应保持为 `false`。
 - 设置 `agent_claude_code_backup_root` 后，`settings.json`、`~/.claude.json` 和 `CLAUDE.md` 的备份会分别写入其下的 `settings/`、`user-json/`、`claude-md/` 子目录。

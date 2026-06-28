@@ -17,6 +17,11 @@
         agent_copilot_cli_mcp_config:
           mcpServers:
             legacy:
+              type: stdio
+              command: python3
+              args:
+                - -m
+                - legacy
               tools:
                 - legacy_tool
                 - extra_tool
@@ -85,5 +90,6 @@
           - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers['open-websearch'].tools == ['search']
           - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.codecov.env.CODECOV_BASE_URL == 'https://codecov.io'
           - (agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers.serena.startup_timeout_sec == 20
+          - (((agent_copilot_cli_mcp_config_final.stdout | from_json).mcpServers | dict2items | map(attribute='key') | list | sort) == ['codecov', 'legacy', 'mcp-server-fetch', 'open-websearch', 'serena'])
         fail_msg: "agent_copilot_cli 场景验证失败"
         success_msg: "✓ agent_copilot_cli 场景通过"

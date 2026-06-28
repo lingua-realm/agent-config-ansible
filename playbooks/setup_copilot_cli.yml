@@ -57,16 +57,18 @@
           - (copilot_cli_mcp_servers | default({})) is mapping
           - (copilot_cli_default_tools | default(['*'])) is sequence
           - (copilot_cli_default_tools | default(['*'])) is not string
+          - (copilot_cli_mcp_servers_mode | default('replace') | lower) in ['merge', 'replace']
         fail_msg: >-
           Copilot CLI 编排输入无效：请检查 agent_mcps/servers.yml 与
           copilot_cli/settings.yml、copilot_cli/mcp_servers.yml 中的变量结构，
-          尤其是 agent_mcps、copilot_cli_mcp_servers 与 copilot_cli_default_tools。
+          尤其是 agent_mcps、copilot_cli_mcp_servers、copilot_cli_default_tools 与 copilot_cli_mcp_servers_mode。
       tags:
         - always
 
     - name: 初始化 Copilot CLI MCP 配置
       set_fact:
         copilot_cli_mcp_servers_effective: {}
+        copilot_cli_mcp_servers_mode_effective: "{{ copilot_cli_mcp_servers_mode | default('replace') | lower }}"
       tags:
         - always
 
@@ -190,6 +192,7 @@
         agent_copilot_cli_confirm_mcp_config_update: "{{ copilot_cli_confirm_mcp_config_update | default(true) | bool }}"
         agent_copilot_cli_backup: "{{ copilot_cli_backup | default(true) | bool }}"
         agent_copilot_cli_backup_root: "{{ copilot_cli_backup_root_effective }}"
+        agent_copilot_cli_mcp_servers_mode: "{{ copilot_cli_mcp_servers_mode_effective }}"
         agent_copilot_cli_mcp_config:
           mcpServers: "{{ copilot_cli_mcp_servers_effective }}"
       tags:

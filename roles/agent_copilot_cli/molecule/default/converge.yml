@@ -56,6 +56,11 @@
         agent_copilot_cli_mcp_config:
           mcpServers:
             legacy:
+              type: stdio
+              command: python3
+              args:
+                - -m
+                - legacy
               tools:
                 - legacy_tool
                 - extra_tool

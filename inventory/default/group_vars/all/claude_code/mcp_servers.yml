@@ -1,6 +1,6 @@
-# ===== claude.json 增量合并配置 =====
-# 以下配置会递归深度合并到 ~/.claude.json
-# 仅覆盖声明的 key，未声明的保持原样
+# ===== claude.json MCP 配置 =====
+# 默认仅对 ~/.claude.json.mcpServers 做严格替换（删除未声明条目）。
+# 如需兼容旧行为，可设 claude_code_mcp_servers_mode: merge。
 # 默认共享 MCP 定义统一维护在 group_vars/all/agent_mcps/servers.yml 的 agent_mcps 下。
 # 如需仅对 Claude Code 覆盖或补充某个服务，可在下方 mcpServers 中声明同名项。
 # 用户 JSON 同步前是否确认由顶层变量 `claude_code_confirm_user_json_update` 控制，
@@ -16,6 +16,8 @@
 #         env: {...}                    # stdio 类型（可选）
 #         url: ...                      # http 类型
 #         headers: {...}               # http 类型（可选）
+
+claude_code_mcp_servers_mode: replace
 
 claude_code_dot_claude_json_merge:
   # 仅放 Claude Code 特有的 MCP 覆盖项；默认共享配置由 agent_mcps 注入

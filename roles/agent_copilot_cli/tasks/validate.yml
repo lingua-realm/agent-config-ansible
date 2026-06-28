@@ -13,6 +13,7 @@
       - agent_copilot_cli_mcp_config_path | length > 0
       - agent_copilot_cli_temp_root | length > 0
       - agent_copilot_cli_mcp_config is mapping
+      - (agent_copilot_cli_mcp_servers_mode | lower) in ['merge', 'replace']
     fail_msg: >-
       agent_copilot_cli 角色参数无效：请确保 home_dir / mcp_config_path /
       temp_root 非空，且 mcp_config 为对象结构。
@@ -25,6 +26,7 @@
           'mcpServers': {}
         } | combine(agent_copilot_cli_mcp_config, recursive=True)
       }}
+    agent_copilot_cli_mcp_servers_mode_normalized: "{{ agent_copilot_cli_mcp_servers_mode | lower }}"
   changed_when: false
 
 - name: 校验归一化后的 Copilot CLI MCP 配置

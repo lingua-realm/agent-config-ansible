@@ -75,7 +75,7 @@ opencommit_cli
 
 agent_copilot_cli
   ├── npm_command_bootstrap
-  └── managed_json_merge
+  └── managed_file
 
 agent_cursor
   ├── npm_command_bootstrap
@@ -187,6 +187,7 @@ tmps/                          # 本地执行时的默认备份和日志目录
 - `setup_gemini_cli.yml` 会把 `gemini_cli/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `gemini_cli/mcp_servers.yml` 归一化成单个 `agent_gemini_cli_settings` / `agent_gemini_cli_env` 输入。
 - `setup_opencommit.yml` 会把 `opencommit/settings.yml` 与 `models.yml` 归一化成单个 `opencommit_cli_config` 输入，并同步到 `~/.opencommit`。
 - `setup_copilot_cli.yml` 当前只管理 `~/.copilot/mcp-config.json`，不负责 Copilot CLI 账号、模型或其他偏好设置。
+- Copilot CLI 的 `mcpServers` 默认使用严格替换模式（`replace`）以清理未声明条目；如需兼容旧行为可设置 `copilot_cli_mcp_servers_mode: merge`。
 - `setup_cursor.yml` 当前只管理 `~/.cursor/mcp.json`，供 Cursor 编辑器与 Cursor Agent CLI 共享使用，不负责账号、模型或其他偏好设置。
 - `setup_opencode.yml` 会把 `opencode/settings.yml`、`models.yml`、`agent_mcps/servers.yml` 和 `opencode/mcp_servers.yml` 归一化成单个 `agent_opencode_config` 输入，并可写入 `~/.local/share/opencode/managed-secrets/` 中的密钥文件；`auth.json` / `mcp-auth.json` 支持但默认不管理。
 - `managed_agent_skills` 的 `source` 必须对目标机可见；仓库内路径通常只适用于 `ansible_connection=local`。

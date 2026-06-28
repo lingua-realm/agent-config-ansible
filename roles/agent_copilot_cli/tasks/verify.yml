@@ -49,6 +49,16 @@
 - name: 验证 mcpServers 已正确写入
   assert:
     that:
+      - agent_copilot_cli_mcp_config_data.mcpServers == (agent_copilot_cli_mcp_config_normalized.mcpServers | default({}))
+    fail_msg: "mcp-config.json mcpServers 与期望不一致（replace 模式要求精确一致）"
+    success_msg: "✓ mcp-config.json mcpServers 与期望完全一致"
+  when:
+    - agent_copilot_cli_manage_mcp_config | bool
+    - agent_copilot_cli_mcp_servers_mode_normalized == 'replace'
+
+- name: 验证 mcpServers 已正确写入
+  assert:
+    that:
       - agent_copilot_cli_mcp_config_data.mcpServers[item.key] is defined
       - agent_copilot_cli_mcp_config_data.mcpServers[item.key] is mapping
       - >-
@@ -64,4 +74,5 @@
     label: "{{ item.key }}"
   when:
     - agent_copilot_cli_manage_mcp_config | bool
+    - agent_copilot_cli_mcp_servers_mode_normalized == 'merge'
     - agent_copilot_cli_mcp_config_normalized.mcpServers | length > 0
