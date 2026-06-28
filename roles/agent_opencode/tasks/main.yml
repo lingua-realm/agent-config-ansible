@@ -1,0 +1,40 @@
+---
+- name: OpenCode 自动化配置入口
+  include_tasks: validate.yml
+
+- name: OpenCode opencode.json 阶段
+  include_tasks: sync_config.yml
+  when: agent_opencode_manage_config | bool
+
+- name: OpenCode tui.json 阶段
+  include_tasks: sync_tui_config.yml
+  when: agent_opencode_should_manage_tui_config | bool
+
+- name: OpenCode 敏感文件阶段
+  include_tasks: sync_sensitive_files.yml
+  when: agent_opencode_should_manage_sensitive_files | bool
+
+- name: OpenCode 资产同步阶段
+  include_tasks: sync_assets.yml
+  when: agent_opencode_should_manage_assets | bool
+
+- name: OpenCode 验证阶段
+  include_tasks: verify.yml
+  when: agent_opencode_run_verify | bool
+
+- name: 汇总 OpenCode 自动化配置结果
+  set_fact:
+    agent_opencode_result:
+      changed: >-
+        {{
+          (agent_opencode_config_result.changed | bool)
+          or (agent_opencode_tui_config_result.changed | bool)
+          or (agent_opencode_sensitive_changed | bool)
+          or (agent_opencode_assets_changed | bool)
+        }}
+      opencode_cli: "{{ agent_opencode_opencode_status }}"
+      config: "{{ agent_opencode_config_result }}"
+      tui_config: "{{ agent_opencode_tui_config_result }}"
+      sensitive_files: "{{ agent_opencode_sensitive_results }}"
+      assets: "{{ agent_opencode_asset_results }}"
+  changed_when: false

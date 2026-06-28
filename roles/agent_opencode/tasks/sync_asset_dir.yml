@@ -1,0 +1,26 @@
+---
+- name: 同步 OpenCode {{ agent_opencode_asset_item.key }} 目录
+  include_role:
+    name: managed_tree
+  vars:
+    managed_tree_display_name: "OpenCode {{ agent_opencode_asset_item.key }}"
+    managed_tree_src: "{{ (agent_opencode_asset_item.value | regex_replace('/+$', '')) ~ '/' }}"
+    managed_tree_dest: "{{ agent_opencode_config_dir }}/{{ agent_opencode_asset_item.key }}/"
+    managed_tree_delete: "{{ agent_opencode_asset_delete }}"
+
+- name: 记录 OpenCode {{ agent_opencode_asset_item.key }} 资产同步结果
+  set_fact:
+    agent_opencode_asset_results: >-
+      {{
+        agent_opencode_asset_results
+        + [
+          managed_tree_result
+          | combine({'name': agent_opencode_asset_item.key}, recursive=True)
+        ]
+      }}
+    agent_opencode_assets_changed: >-
+      {{
+        (agent_opencode_assets_changed | bool)
+        or (managed_tree_result.changed | bool)
+      }}
+  changed_when: false

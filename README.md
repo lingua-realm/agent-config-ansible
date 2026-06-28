@@ -1,6 +1,6 @@
 # agent-config-ansible
 
-基于 Ansible 的 AI Agent / AI CLI 配置管理仓库，用来把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor、OpenCommit 以及 agent skills 以声明式方式同步到本地或远端主机。
+基于 Ansible 的 AI Agent / AI CLI 配置管理仓库，用来把 Claude Code、Codex CLI、Gemini CLI、GitHub Copilot CLI、Cursor、OpenCode、OpenCommit 以及 agent skills 以声明式方式同步到本地或远端主机。
 
 ## 管理范围
 
@@ -11,6 +11,7 @@
 | `playbooks/setup_gemini_cli.yml`   | 部署 Gemini CLI 的 `settings.json`、`.env` 与可选 `GEMINI.md` |
 | `playbooks/setup_copilot_cli.yml`  | 部署 GitHub Copilot CLI 的 `~/.copilot/mcp-config.json`       |
 | `playbooks/setup_cursor.yml`       | 部署 Cursor / Cursor Agent CLI 共用的 `~/.cursor/mcp.json`    |
+| `playbooks/setup_opencode.yml`     | 部署 OpenCode 的 `opencode.json`、可选 `tui.json`、敏感文件与资产目录 |
 | `playbooks/setup_opencommit.yml`   | 部署 OpenCommit CLI 的 `~/.opencommit`                        |
 | `playbooks/setup_agent_skills.yml` | 通过 `skills` CLI 声明式安装或卸载 skills                     |
 
@@ -61,6 +62,7 @@ inventory/<profile>/
 │   ├── gemini_cli/
 │   ├── copilot_cli/
 │   ├── cursor/
+│   ├── opencode/
 │   ├── opencommit/
 │   └── secrets.yml
 ├── claude_assets/
@@ -74,6 +76,7 @@ inventory/<profile>/
 - 共享 MCP 默认值放在 `group_vars/all/agent_mcps/servers.yml`。
 - 某个工具的差异化配置放在对应目录下的 `mcp_servers.yml`。
 - API Key、token 等敏感信息放在 `group_vars/all/secrets.yml` 或 CI Secret，不要写进说明资产。
+- OpenCode 默认通过 `~/.local/share/opencode/managed-secrets/` 中的受管密钥文件和 `{file:...}` 引用使用 API key；`auth.json` / `mcp-auth.json` 支持声明式管理，但默认关闭。
 - `confirm`、备份目录、CLI 检查、自动安装、`manage_*`、`run_verify` 这类运行控制默认已内置，只有需要覆盖时再显式声明。
 - Codex CLI 会把本地信任目录写进 `~/.codex/config.toml` 的 `[projects]` 段；`setup_codex.yml` 会保留目标机现有的本地 `projects` 状态，避免这些路径造成声明式配置漂移，因此无需把它们写进 inventory。
 
@@ -89,6 +92,7 @@ uv run ansible-playbook playbooks/setup_codex.yml
 uv run ansible-playbook playbooks/setup_gemini_cli.yml
 uv run ansible-playbook playbooks/setup_copilot_cli.yml
 uv run ansible-playbook playbooks/setup_cursor.yml
+uv run ansible-playbook playbooks/setup_opencode.yml
 uv run ansible-playbook playbooks/setup_opencommit.yml
 uv run ansible-playbook playbooks/setup_agent_skills.yml
 ```
@@ -122,6 +126,7 @@ scripts/run-playbook.sh personal playbooks/setup_cursor.yml -e "target_hosts=all
 
 ```bash
 uv run ansible-playbook --syntax-check playbooks/setup_codex.yml
+uv run ansible-playbook --syntax-check playbooks/setup_opencode.yml
 
 cd roles/agent_codex
 uv run molecule test

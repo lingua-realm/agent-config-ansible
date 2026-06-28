@@ -1,0 +1,120 @@
+---
+- name: Verify - OpenCode 自动化配置幂等
+  hosts: all
+  environment:
+    PATH: "{{ agent_opencode_fake_bin }}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  vars:
+    agent_opencode_test_root: /tmp/agent-opencode/default
+    agent_opencode_fake_bin: "{{ agent_opencode_test_root }}/fake-bin"
+    agent_opencode_config_dir_test: "{{ agent_opencode_test_root }}/home/.config/opencode"
+    agent_opencode_data_dir_test: "{{ agent_opencode_test_root }}/home/.local/share/opencode"
+  tasks:
+    - name: 再次执行 agent_opencode 角色
+      include_role:
+        name: agent_opencode
+      vars:
+        agent_opencode_config_dir: "{{ agent_opencode_config_dir_test }}"
+        agent_opencode_data_dir: "{{ agent_opencode_data_dir_test }}"
+        agent_opencode_temp_root: "{{ agent_opencode_test_root }}/tmp"
+        agent_opencode_confirm_config_update: false
+        agent_opencode_confirm_tui_config_update: false
+        agent_opencode_confirm_sensitive_update: false
+        agent_opencode_config:
+          "$schema": https://opencode.ai/config.json
+          model: ppio/pa-gpt-5.4
+          small_model: ppio/pa-gpt-5.4
+          autoupdate: false
+          permission:
+            edit: ask
+            bash: ask
+          provider:
+            ppio:
+              npm: "@ai-sdk/openai"
+              name: PPIO
+              options:
+                baseURL: https://api.ppio.com/openai/v1
+                apiKey: "{file:/tmp/agent-opencode/default/home/.local/share/opencode/managed-secrets/ppio-api-key}"
+              models:
+                pa-gpt-5.4:
+                  name: PPIO GPT-5.4
+          mcp:
+            fetch:
+              type: local
+              command:
+                - uvx
+                - mcp-server-fetch
+              enabled: true
+            websearch:
+              type: local
+              command:
+                - npx
+                - -y
+                - open-websearch@latest
+              environment:
+                MODE: stdio
+              timeout: 20000
+            deepwiki:
+              type: remote
+              url: https://mcp.deepwiki.com/mcp
+              enabled: true
+              headers:
+                Authorization: "Bearer {env:DEEPWIKI_TOKEN}"
+        agent_opencode_tui_config:
+          theme: system
+        agent_opencode_secret_files:
+          ppio-api-key: test-key
+        agent_opencode_asset_dirs:
+          agents: "{{ playbook_dir }}/files/assets/agents"
+          commands: "{{ playbook_dir }}/files/assets/commands"
+
+    - name: 解析最终 opencode.json
+      command:
+        argv:
+          - python3
+          - -c
+          - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+          - "{{ agent_opencode_config_dir_test }}/opencode.json"
+      register: agent_opencode_config_final
+      changed_when: false
+
+    - name: 解析最终 tui.json
+      command:
+        argv:
+          - python3
+          - -c
+          - import json, pathlib, sys; print(json.dumps(json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')), ensure_ascii=False))
+          - "{{ agent_opencode_config_dir_test }}/tui.json"
+      register: agent_opencode_tui_final
+      changed_when: false
+
+    - name: 读取 secret file 状态
+      stat:
+        path: "{{ agent_opencode_data_dir_test }}/managed-secrets/ppio-api-key"
+      register: agent_opencode_secret_final
+
+    - name: 读取 assets 状态
+      stat:
+        path: "{{ item }}"
+      loop:
+        - "{{ agent_opencode_config_dir_test }}/agents/reviewer.md"
+        - "{{ agent_opencode_config_dir_test }}/commands/hello.md"
+      register: agent_opencode_assets_final
+
+    - name: 断言 OpenCode 结果
+      assert:
+        that:
+          - not (agent_opencode_result.changed | bool)
+          - (agent_opencode_config_final.stdout | from_json).model == 'ppio/pa-gpt-5.4'
+          - (agent_opencode_config_final.stdout | from_json).provider.ppio.options.baseURL == 'https://api.ppio.com/openai/v1'
+          - (agent_opencode_config_final.stdout | from_json).provider.ppio.options.apiKey == '{file:/tmp/agent-opencode/default/home/.local/share/opencode/managed-secrets/ppio-api-key}'
+          - (agent_opencode_config_final.stdout | from_json).mcp.fetch.command == ['uvx', 'mcp-server-fetch']
+          - (agent_opencode_config_final.stdout | from_json).mcp.websearch.environment.MODE == 'stdio'
+          - (agent_opencode_config_final.stdout | from_json).mcp.websearch.timeout == 20000
+          - (agent_opencode_config_final.stdout | from_json).mcp.deepwiki.type == 'remote'
+          - (agent_opencode_config_final.stdout | from_json).mcp.deepwiki.headers.Authorization == 'Bearer {env:DEEPWIKI_TOKEN}'
+          - (agent_opencode_tui_final.stdout | from_json).theme == 'system'
+          - agent_opencode_secret_final.stat.exists
+          - agent_opencode_secret_final.stat.mode == '0600'
+          - agent_opencode_assets_final.results | map(attribute='stat.exists') | min
+        fail_msg: "agent_opencode 场景验证失败"
+        success_msg: "✓ agent_opencode 场景通过"

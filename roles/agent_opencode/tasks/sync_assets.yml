@@ -1,0 +1,14 @@
+---
+- name: 显示阶段信息
+  debug:
+    msg: |
+      ========================================
+      阶段 5：同步 OpenCode 资产目录
+      ========================================
+
+- name: 同步 OpenCode 资产目录
+  include_tasks: sync_asset_dir.yml
+  loop: "{{ agent_opencode_asset_dirs | dict2items }}"
+  loop_control:
+    loop_var: agent_opencode_asset_item
+    label: "{{ agent_opencode_asset_item.key }}"
